@@ -1,0 +1,2118 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full bg-white">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Akuntansi MVP — Belajar dari jurnal</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2309090b'/%3E%3Ctext x='16' y='22' font-family='sans-serif' font-size='18' font-weight='600' fill='white' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    [x-cloak] { display: none !important; }
+    body { font-feature-settings: "cv11", "ss01"; }
+    @media (prefers-reduced-motion: no-preference) {
+      html { scroll-behavior: smooth; }
+    }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff !important; }
+      main { width: 100% !important; }
+      .card { break-inside: avoid; border-color: #d4d4d8 !important; }
+    }
+  </style>
+  <style type="text/tailwindcss">
+    @layer components {
+      .btn { @apply inline-flex select-none items-center justify-center gap-1.5 rounded-md border border-transparent px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40; }
+      .btn-primary { @apply bg-zinc-950 text-white hover:bg-zinc-800; }
+      .btn-outline { @apply border-zinc-200 bg-white text-zinc-950 hover:bg-zinc-50; }
+      .btn-danger { @apply border-zinc-200 bg-white text-zinc-950 hover:border-zinc-950 hover:bg-zinc-50; }
+      .btn-ghost { @apply text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950; }
+      .btn-sm { @apply px-2 py-1 text-xs; }
+      .input { @apply w-full rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-950 placeholder:text-zinc-400 focus:border-zinc-950 focus:outline-none focus:ring-1 focus:ring-zinc-950; }
+      .label { @apply mb-1 block text-xs font-medium uppercase tracking-wide text-zinc-500; }
+      .card { @apply rounded-md border border-zinc-200 bg-white; }
+      .card-pad { @apply p-4 sm:p-5; }
+      .th { @apply border-b border-zinc-200 px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-zinc-500; }
+      .td { @apply border-b border-zinc-100 px-3 py-2 align-middle text-sm text-zinc-950; }
+      .num { @apply text-right tabular-nums; }
+      .badge { @apply inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium; }
+      .badge-outline { @apply border-zinc-300 bg-white text-zinc-600; }
+      .badge-solid { @apply border-zinc-950 bg-zinc-950 text-white; }
+      .eyebrow { @apply text-xs font-medium uppercase tracking-wider text-zinc-500; }
+      .muted { @apply text-sm text-zinc-500; }
+      .tip { @apply cursor-help border-b border-dotted border-zinc-400; }
+      .link { @apply text-left underline decoration-zinc-300 underline-offset-2 hover:decoration-zinc-950; }
+      .page-title { @apply text-2xl font-semibold tracking-tight text-zinc-950; }
+      .section-title { @apply text-sm font-semibold text-zinc-950; }
+      .divider { @apply border-t border-zinc-200; }
+    }
+  </style>
+</head>
+<body class="h-full bg-zinc-50 text-zinc-950 antialiased" x-data>
+<div x-data class="flex min-h-screen">
+  <aside class="no-print sticky top-0 hidden h-screen w-16 shrink-0 flex-col border-r border-zinc-200 bg-white sm:flex lg:w-60">
+    <div class="flex h-16 items-center gap-2 border-b border-zinc-200 px-3 lg:px-5">
+      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-zinc-950 text-sm font-semibold text-white">A</div>
+      <div class="hidden lg:block">
+        <p class="text-sm font-semibold leading-tight">Akuntansi MVP</p>
+        <p class="text-[11px] leading-tight text-zinc-500">Belajar dari jurnal</p>
+      </div>
+    </div>
+    <nav class="flex-1 space-y-0.5 overflow-y-auto p-2">
+      <template x-for="item in $store.app.menu" :key="item.id">
+        <button type="button" @click="$store.app.go(item.id)"
+          class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors"
+          :class="$store.app.page === item.id ? 'bg-zinc-950 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950'">
+          <span class="flex h-5 w-5 shrink-0 items-center justify-center" x-html="item.icon"></span>
+          <span class="hidden lg:inline" x-text="item.label"></span>
+        </button>
+      </template>
+    </nav>
+    <div class="space-y-1 border-t border-zinc-200 p-2">
+      <button type="button" class="btn btn-outline w-full justify-start btn-sm" @click="$store.app.requestLoadScenario()">
+        <span class="hidden lg:inline">Muat skenario</span><span class="lg:hidden">S</span>
+      </button>
+      <button type="button" class="btn btn-danger w-full justify-start btn-sm" @click="$store.app.requestClearData()">
+        <span class="hidden lg:inline">Clear data</span><span class="lg:hidden">C</span>
+      </button>
+      <button type="button" class="btn btn-outline w-full justify-start btn-sm" @click="$store.app.runTests()">
+        <span class="hidden lg:inline">Uji regresi</span><span class="lg:hidden">T</span>
+      </button>
+      <p class="hidden px-1 pt-1 text-[11px] leading-snug text-zinc-400 lg:block">Prototype belajar · localStorage</p>
+    </div>
+  </aside>
+
+  <main class="min-w-0 flex-1">
+    <div class="no-print flex items-center gap-2 border-b border-zinc-200 bg-white px-4 py-2 sm:hidden">
+      <select class="input" x-model="$store.app.page" @change="$store.app.go($event.target.value)">
+        <template x-for="item in $store.app.menu" :key="item.id">
+          <option :value="item.id" x-text="item.label"></option>
+        </template>
+      </select>
+    </div>
+
+    <!-- ============================= DASHBOARD ============================= -->
+    <section x-show="$store.app.page === 'dashboard'" x-cloak x-data="dashboardPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="muted mt-1">Gambaran besar dari jurnal yang Anda catat. Tanggal acuan: <span class="font-medium text-zinc-950" x-text="Format.tanggalPanjang(per)"></span>.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button class="btn btn-outline" @click="$store.app.requestLoadScenario()">Muat skenario</button>
+          <button class="btn btn-primary" @click="$store.app.go('jurnal')">Catat jurnal</button>
+        </div>
+      </header>
+
+      <div class="space-y-6 px-4 py-6 sm:px-8">
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div class="card card-pad">
+            <p class="eyebrow" x-tooltip="'kas'">Kas &amp; bank</p>
+            <p class="mt-2 text-2xl font-semibold tabular-nums" x-text="Format.rupiah(kas)"></p>
+            <p class="muted mt-1">Total seluruh rekening</p>
+          </div>
+          <div class="card card-pad">
+            <p class="eyebrow" x-tooltip="'piutangUsaha'">Total piutang</p>
+            <p class="mt-2 text-2xl font-semibold tabular-nums" x-text="Format.rupiah(piutang)"></p>
+            <p class="muted mt-1">Belum diterima dari pelanggan</p>
+          </div>
+          <div class="card card-pad">
+            <p class="eyebrow" x-tooltip="'utangUsaha'">Total utang</p>
+            <p class="mt-2 text-2xl font-semibold tabular-nums" x-text="Format.rupiah(utang)"></p>
+            <p class="muted mt-1">Belum dibayar ke pemasok</p>
+          </div>
+          <div class="card card-pad">
+            <p class="eyebrow" x-tooltip="'labaBersih'">Laba bulan ini</p>
+            <p class="mt-2 text-2xl font-semibold tabular-nums" x-text="Format.rupiah(labaBulan.labaBersih)"></p>
+            <p class="muted mt-1" x-text="Format.namaBulan(per)"></p>
+          </div>
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-3">
+          <div class="card card-pad lg:col-span-2">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="eyebrow" x-tooltip="'persamaan'">Persamaan akuntansi</p>
+                <p class="mt-1 text-sm text-zinc-600">Aset = Kewajiban + Ekuitas</p>
+              </div>
+              <span class="badge" :class="nc.seimbang ? 'badge-solid' : 'badge-outline'" x-text="nc.seimbang ? 'Seimbang' : 'Tidak seimbang'"></span>
+            </div>
+            <div class="mt-4 grid gap-3 text-sm sm:grid-cols-4">
+              <div>
+                <p class="text-zinc-500">Total aset</p>
+                <p class="font-medium tabular-nums" x-text="Format.rupiah(nc.totalAset)" x-tooltip="nc.tooltipAset"></p>
+              </div>
+              <div>
+                <p class="text-zinc-500">Kewajiban</p>
+                <p class="font-medium tabular-nums" x-text="Format.rupiah(nc.totalKewajiban)"></p>
+              </div>
+              <div>
+                <p class="text-zinc-500">Ekuitas</p>
+                <p class="font-medium tabular-nums" x-text="Format.rupiah(nc.totalEkuitas)"></p>
+              </div>
+              <div>
+                <p class="text-zinc-500" x-tooltip="'barisPengecekan'">Selisih</p>
+                <p class="font-medium tabular-nums" x-text="Format.rupiah(nc.selisih)"></p>
+              </div>
+            </div>
+            <p x-show="!nc.seimbang" class="mt-4 rounded-md border border-zinc-300 bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-600">
+              Neraca tidak seimbang. Biasanya penyebabnya jurnal yang tidak balance atau akun dengan tipe yang belum diisi.
+            </p>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <button class="btn btn-outline btn-sm" @click="$store.app.go('laporan')">Buka laporan</button>
+              <button class="btn btn-outline btn-sm" @click="$store.app.go('coa')">Lihat Chart of Accounts</button>
+            </div>
+          </div>
+
+          <div class="card card-pad space-y-3">
+            <div>
+              <p class="eyebrow">Alat belajar</p>
+              <p class="muted mt-1">Cadangkan, pulihkan, atau ulangi skenario.</p>
+            </div>
+            <button class="btn btn-outline w-full justify-start" @click="$store.app.go('informasi')">Baca dasar akuntansi</button>
+            <button class="btn btn-outline w-full justify-start" @click="$store.app.requestRestartScenario()">Ulangi skenario 10 transaksi</button>
+            <div class="grid grid-cols-2 gap-2">
+              <button class="btn btn-outline" @click="$store.app.exportData()">Ekspor JSON</button>
+              <button class="btn btn-outline" @click="pickFile()">Impor JSON</button>
+            </div>
+            <input type="file" accept="application/json,.json" class="hidden" x-ref="file" @change="onFile($event)">
+            <button class="btn btn-outline w-full" @click="$store.app.runTests()">Jalankan uji regresi</button>
+            <button class="btn btn-danger w-full" @click="$store.app.requestClearData()">Clear data</button>
+            <p class="text-[11px] leading-snug text-zinc-400">Clear data mengembalikan akun ke 23 akun bawaan.</p>
+            <p class="text-[11px] leading-snug text-zinc-400" x-text="jumlahJurnal + ' jurnal tersimpan'"></p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+            <p class="section-title">Jurnal terakhir</p>
+            <button class="btn btn-ghost btn-sm" @click="$store.app.go('jurnal')">Lihat semua</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr>
+                  <th class="th">Tanggal</th>
+                  <th class="th">Nomor</th>
+                  <th class="th">Keterangan</th>
+                  <th class="th num">Debit</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="journal in recent" :key="journal.id">
+                  <tr class="hover:bg-zinc-50">
+                    <td class="td whitespace-nowrap" x-text="Format.tanggal(journal.tanggal)"></td>
+                    <td class="td whitespace-nowrap font-medium" x-text="journal.nomor"></td>
+                    <td class="td" x-text="journal.keterangan"></td>
+                    <td class="td num" x-text="Format.num(totalOf(journal))"></td>
+                  </tr>
+                </template>
+                <tr x-show="recent.length === 0">
+                  <td colspan="4" class="td py-8 text-center text-zinc-500">Belum ada jurnal. Muat skenario atau catat jurnal pertama.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <details class="card bg-zinc-50">
+          <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-700">Cara membaca halaman ini</summary>
+          <div class="border-t border-zinc-200 px-4 py-3 text-sm leading-relaxed text-zinc-600">
+            Dashboard hanya menampilkan hasil hitung dari jurnal. Kas adalah jumlah saldo semua akun yang ditandai sebagai rekening. Total piutang dan utang adalah saldo akun 1-1200 dan 2-1100. Jika persamaan tidak seimbang, periksa jurnal yang tidak balance atau akun yang belum punya tipe.
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ============================= CHART OF ACCOUNTS ============================= -->
+    <section x-show="$store.app.page === 'coa'" x-cloak x-data="coaPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Chart of Accounts</h1>
+          <p class="muted mt-1">23 akun awal. Kode mengikuti pola: 1 aset, 2 kewajiban, 3 ekuitas, 4 pendapatan, 5 beban.</p>
+        </div>
+        <button class="btn btn-primary" @click="openAdd()">Tambah akun</button>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <div class="card card-pad" x-show="adding" x-cloak>
+          <div class="flex items-start justify-between">
+            <p class="section-title">Tambah akun</p>
+            <button class="btn btn-ghost btn-sm" @click="adding = false">Tutup</button>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label class="label">Kode akun</label>
+              <input class="input" placeholder="1-1500" x-model="draft.kode">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="label">Nama akun</label>
+              <input class="input" placeholder="Nama akun baru" x-model="draft.nama">
+            </div>
+            <div>
+              <label class="label" x-tooltip="'tipeAkun'">Tipe akun</label>
+              <select class="input" x-model="draft.tipe" @change="syncNormal()">
+                <template x-for="tipe in types" :key="tipe">
+                  <option :value="tipe" x-text="tipe"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="label" x-tooltip="'saldoNormal'">Saldo normal</label>
+              <select class="input" x-model="draft.saldoNormal">
+                <option value="Debit">Debit</option>
+                <option value="Kredit">Kredit</option>
+              </select>
+            </div>
+            <div class="flex items-end gap-2 pb-1.5">
+              <label class="flex items-center gap-2 text-sm text-zinc-700">
+                <input type="checkbox" class="h-4 w-4 rounded border-zinc-300" x-model="draft.rekening" :disabled="draft.tipe !== 'Aset'">
+                Tandai sebagai rekening
+              </label>
+            </div>
+            <div>
+              <label class="label">No. rekening (opsional)</label>
+              <input class="input" placeholder="123-456-7890" x-model="draft.noRekening">
+            </div>
+            <div class="flex items-end">
+              <button class="btn btn-primary w-full" @click="saveAdd()">Simpan akun</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-pad" x-show="editing" x-cloak>
+          <div class="flex items-start justify-between">
+            <p class="section-title">Ubah akun</p>
+            <button class="btn btn-ghost btn-sm" @click="cancelEdit()">Tutup</button>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-3">
+            <div class="sm:col-span-2">
+              <label class="label">Nama akun</label>
+              <input class="input" x-model="editForm.nama">
+            </div>
+            <div>
+              <label class="label">No. rekening</label>
+              <input class="input" x-model="editForm.noRekening">
+            </div>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <button class="btn btn-primary" @click="saveEdit()">Simpan perubahan</button>
+            <button class="btn btn-outline" @click="cancelEdit()">Batal</button>
+          </div>
+        </div>
+
+        <template x-for="tipe in types" :key="tipe">
+          <div class="card">
+            <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+              <p class="section-title" x-text="tipe"></p>
+              <span class="badge badge-outline" x-text="group(tipe).length + ' akun'"></span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <tr>
+                    <th class="th">Kode</th>
+                    <th class="th">Nama akun</th>
+                    <th class="th">Saldo normal</th>
+                    <th class="th num">Saldo</th>
+                    <th class="th">Status</th>
+                    <th class="th text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="account in group(tipe)" :key="account.id">
+                    <tr class="hover:bg-zinc-50" :class="account.aktif === false ? 'opacity-50' : ''">
+                      <td class="td whitespace-nowrap font-mono text-xs" x-text="account.kode"></td>
+                      <td class="td">
+                        <span x-text="account.nama"></span>
+                        <span class="ml-1.5 rounded-full border border-zinc-200 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-zinc-400" x-show="account.rekening" x-tooltip="'rekening'">rekening</span>
+                        <p class="text-[11px] text-zinc-400" x-show="account.noRekening" x-text="account.noRekening"></p>
+                      </td>
+                      <td class="td"><span class="badge badge-outline" x-text="account.saldoNormal" x-tooltip="'saldoNormal'"></span></td>
+                      <td class="td num">
+                        <button class="link tabular-nums" @click="$store.app.openLedger(account.id)" x-text="Format.num(balance(account))"></button>
+                      </td>
+                      <td class="td">
+                        <span class="badge" :class="account.aktif === false ? 'badge-outline' : 'badge-solid'" x-text="account.aktif === false ? 'Nonaktif' : 'Aktif'"></span>
+                      </td>
+                      <td class="td">
+                        <div class="flex justify-end gap-1">
+                          <button class="btn btn-ghost btn-sm" @click="startEdit(account)">Ubah</button>
+                          <button class="btn btn-ghost btn-sm" @click="toggle(account)" x-text="account.aktif === false ? 'Aktifkan' : 'Nonaktifkan'"></button>
+                          <button class="btn btn-ghost btn-sm" @click="remove(account)">Hapus</button>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                  <tr x-show="group(tipe).length === 0">
+                    <td colspan="6" class="td py-6 text-center text-zinc-500">Belum ada akun pada tipe ini.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </template>
+
+        <details class="card bg-zinc-50">
+          <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-700">Cara membaca halaman ini</summary>
+          <div class="border-t border-zinc-200 px-4 py-3 text-sm leading-relaxed text-zinc-600">
+            Kode akun menentukan tempat akun muncul di laporan. Saldo normal adalah sisi tempat akun bertambah. Akun yang sudah dipakai di jurnal tidak boleh dihapus, hanya dinonaktifkan, supaya riwayat laporan tetap utuh. Prive sengaja bertipe Ekuitas dengan saldo normal Debit karena ia mengurangi ekuitas.
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ============================= JURNAL UMUM ============================= -->
+    <section x-show="$store.app.page === 'jurnal'" x-cloak x-data="journalPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Jurnal Umum</h1>
+          <p class="muted mt-1">Setiap transaksi minimal dua baris dan harus seimbang: total debit = total kredit.</p>
+        </div>
+        <button class="btn btn-primary" @click="openForm()">Jurnal baru</button>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <div class="card" x-show="showForm" x-cloak>
+          <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+            <p class="section-title">Jurnal manual</p>
+            <button class="btn btn-ghost btn-sm" @click="cancel()">Tutup</button>
+          </div>
+          <div class="card-pad space-y-4">
+            <div class="grid gap-3 sm:grid-cols-3">
+              <div>
+                <label class="label">Tanggal</label>
+                <input type="date" class="input" x-model="form.tanggal">
+              </div>
+              <div class="sm:col-span-2">
+                <label class="label">Keterangan</label>
+                <input class="input" placeholder="Misalnya: Bayar listrik November" x-model="form.keterangan">
+              </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-md border border-zinc-200">
+              <table class="w-full">
+                <thead class="bg-zinc-50">
+                  <tr>
+                    <th class="th w-1/2">Akun</th>
+                    <th class="th num" x-tooltip="'debit'">Debit</th>
+                    <th class="th num" x-tooltip="'kredit'">Kredit</th>
+                    <th class="th"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="(line, index) in form.lines" :key="index">
+                    <tr>
+                      <td class="td">
+                        <select class="input" x-model="line.accountId">
+                          <option value="">Pilih akun…</option>
+                          <template x-for="account in activeAccounts" :key="account.id">
+                            <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
+                          </template>
+                        </select>
+                      </td>
+                      <td class="td">
+                        <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="line.debit" @input="onDebit(index)">
+                      </td>
+                      <td class="td">
+                        <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="line.kredit" @input="onKredit(index)">
+                      </td>
+                      <td class="td text-right">
+                        <button class="btn btn-ghost btn-sm" @click="removeLine(index)" :disabled="form.lines.length <= 2">Hapus</button>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="flex flex-col gap-3 border-t border-zinc-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
+              <button class="btn btn-outline btn-sm" @click="addLine()">Tambah baris</button>
+              <div class="flex flex-wrap items-center gap-4 text-sm">
+                <span>Debit <span class="font-medium tabular-nums" x-text="Format.num(totals.totalDebit)"></span></span>
+                <span>Kredit <span class="font-medium tabular-nums" x-text="Format.num(totals.totalKredit)"></span></span>
+                <span x-show="totals.selisih !== 0" class="badge badge-outline" x-tooltip="'selisih'">
+                  Selisih <span class="ml-1 tabular-nums" x-text="Format.num(totals.selisih)"></span>
+                </span>
+                <span x-show="totals.selisih === 0 && totals.totalDebit > 0" class="badge badge-solid">Seimbang</span>
+              </div>
+            </div>
+
+            <template x-if="validation.errors.length">
+              <ul class="space-y-1 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
+                <template x-for="error in validation.errors" :key="error">
+                  <li x-text="'• ' + error"></li>
+                </template>
+              </ul>
+            </template>
+
+            <div class="flex gap-2">
+              <button class="btn btn-primary" @click="save()" :disabled="!validation.ok">Simpan jurnal</button>
+              <button class="btn btn-outline" @click="cancel()">Batal</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+            <p class="section-title">Daftar jurnal</p>
+            <span class="badge badge-outline" x-text="journals.length + ' jurnal'"></span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr>
+                  <th class="th">Tanggal</th>
+                  <th class="th">Nomor</th>
+                  <th class="th">Keterangan</th>
+                  <th class="th">Sumber</th>
+                  <th class="th num">Debit</th>
+                  <th class="th text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="journal in journals" :key="journal.id">
+                  <tr class="hover:bg-zinc-50">
+                    <td class="td whitespace-nowrap" x-text="Format.tanggal(journal.tanggal)"></td>
+                    <td class="td whitespace-nowrap font-mono text-xs" x-text="journal.nomor"></td>
+                    <td class="td" x-text="journal.keterangan"></td>
+                    <td class="td">
+                      <span class="badge" :class="journal.sumber === 'manual' ? 'badge-outline' : 'badge-solid'" x-text="sourceLabel(journal)"></span>
+                    </td>
+                    <td class="td num" x-text="Format.num(totalOf(journal))"></td>
+                    <td class="td">
+                      <div class="flex justify-end gap-1">
+                        <button class="btn btn-ghost btn-sm" @click="detailId = journal.id">Detail</button>
+                        <button class="btn btn-ghost btn-sm" @click="remove(journal)" x-show="journal.sumber === 'manual'">Hapus</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+                <tr x-show="journals.length === 0">
+                  <td colspan="6" class="td py-8 text-center text-zinc-500">Belum ada jurnal. Klik “Jurnal baru” untuk mulai mencatat.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <details class="card bg-zinc-50">
+          <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-700">Cara membaca halaman ini</summary>
+          <div class="border-t border-zinc-200 px-4 py-3 text-sm leading-relaxed text-zinc-600">
+            Satu transaksi menghasilkan minimal satu debit dan satu kredit dengan nilai sama. Selisih dihitung real time; tombol Simpan baru aktif saat selisihnya 0. Jurnal yang berasal dari tagihan atau pembayaran tidak bisa dihapus di sini — ubah lewat dokumen sumbernya agar Piutang, Utang, dan jurnal tetap sinkron.
+          </div>
+        </details>
+      </div>
+
+      <div x-show="detailId" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-zinc-950/40" @click="detailId = null"></div>
+        <div class="relative w-full max-w-2xl rounded-md border border-zinc-200 bg-white p-5 shadow-xl">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="section-title" x-text="detail ? detail.nomor : ''"></p>
+              <p class="muted mt-1" x-text="detail ? Format.tanggalPanjang(detail.tanggal) : ''"></p>
+            </div>
+            <button class="btn btn-ghost btn-sm" @click="detailId = null">Tutup</button>
+          </div>
+          <p class="mt-3 text-sm text-zinc-700" x-text="detail ? detail.keterangan : ''"></p>
+          <div class="mt-4 overflow-x-auto rounded-md border border-zinc-200">
+            <table class="w-full">
+              <thead class="bg-zinc-50">
+                <tr>
+                  <th class="th">Akun</th>
+                  <th class="th">Pihak</th>
+                  <th class="th num">Debit</th>
+                  <th class="th num">Kredit</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="line in (detail ? detail.lines : [])" :key="line.id">
+                  <tr>
+                    <td class="td" x-text="line.akun ? line.akun.kode + ' — ' + line.akun.nama : '—'"></td>
+                    <td class="td text-zinc-500" x-text="line.party ? line.party.nama : '—'"></td>
+                    <td class="td num" x-text="line.debit ? Format.num(line.debit) : ''"></td>
+                    <td class="td num" x-text="line.kredit ? Format.num(line.kredit) : ''"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= TRANSAKSI CEPAT ============================= -->
+    <section x-show="$store.app.page === 'cepat'" x-cloak x-data="quickPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Transaksi Cepat</h1>
+          <p class="muted mt-1">Pilih template, isi angka, lalu lihat jurnal yang akan terbentuk sebelum disimpan.</p>
+        </div>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <div class="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          <template x-for="item in templates" :key="item.id">
+            <button class="btn justify-start text-left" :class="template === item.id ? 'btn-primary' : 'btn-outline'" @click="setTemplate(item.id)" x-text="item.nama"></button>
+          </template>
+        </div>
+
+        <div class="grid gap-5 lg:grid-cols-2">
+          <div class="card card-pad space-y-4">
+            <div>
+              <p class="section-title" x-text="cfg.nama"></p>
+              <p class="muted mt-1" x-text="cfg.desc"></p>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label class="label">Tanggal</label>
+                <input type="date" class="input" x-model="form.tanggal">
+              </div>
+              <div>
+                <label class="label">Jumlah</label>
+                <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="form.jumlah">
+              </div>
+
+              <div>
+                <label class="label" x-text="template === 'transfer' ? 'Dari rekening' : (template === 'setorModal' ? 'Setor ke rekening' : 'Rekening kas/bank')"></label>
+                <select class="input" x-model="form.rekeningId">
+                  <template x-for="account in rekening" :key="account.id">
+                    <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
+                  </template>
+                </select>
+              </div>
+
+              <div x-show="template === 'transfer'">
+                <label class="label">Ke rekening</label>
+                <select class="input" x-model="form.rekeningTujuanId">
+                  <template x-for="account in rekening" :key="account.id">
+                    <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
+                  </template>
+                </select>
+              </div>
+
+              <div class="sm:col-span-2" x-show="template !== 'transfer' && template !== 'setorModal' && template !== 'jualTunai' && template !== 'prive'">
+                <label class="label">Akun lawan</label>
+                <select class="input" x-model="form.akunLawanId">
+                  <template x-for="account in lawanOptions" :key="account.id">
+                    <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
+                  </template>
+                </select>
+              </div>
+
+              <div x-show="template === 'jualTunai'">
+                <label class="label">Akun pendapatan</label>
+                <select class="input" x-model="form.akunLawanId">
+                  <template x-for="account in lawanOptions" :key="account.id">
+                    <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
+                  </template>
+                </select>
+              </div>
+
+              <div class="sm:col-span-2" x-show="template === 'jualTunai'">
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label class="label" x-tooltip="'hpp'">HPP (opsional)</label>
+                    <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="form.hpp">
+                  </div>
+                  <div>
+                    <label class="label">Akun HPP</label>
+                    <select class="input" x-model="form.akunHppId">
+                      <template x-for="account in hppOptions" :key="account.id">
+                        <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
+                      </template>
+                    </select>
+                  </div>
+                </div>
+                <p class="mt-1 text-[11px] text-zinc-400">Jika HPP diisi, sistem menambah Dr HPP dan Cr Persediaan Barang.</p>
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="label">Keterangan (opsional)</label>
+                <input class="input" :placeholder="cfg.nama" x-model="form.keterangan">
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between border-t border-zinc-200 pt-3">
+              <p class="text-sm" x-show="validation.errors.length">
+                <span class="text-zinc-500" x-text="validation.errors[0]"></span>
+              </p>
+              <p class="text-sm text-zinc-500" x-show="!validation.errors.length">Jurnal siap disimpan.</p>
+              <button class="btn btn-primary" @click="save()" :disabled="!validation.ok">Simpan transaksi</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+              <p class="section-title">Pratinjau jurnal</p>
+              <span class="badge" :class="totals.selisih === 0 && totals.totalDebit > 0 ? 'badge-solid' : 'badge-outline'" x-text="totals.selisih === 0 && totals.totalDebit > 0 ? 'Seimbang' : 'Belum seimbang'"></span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead>
+                  <tr>
+                    <th class="th">Akun</th>
+                    <th class="th num">Debit</th>
+                    <th class="th num">Kredit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="(line, index) in lines" :key="index">
+                    <tr>
+                      <td class="td" x-text="accName(line.accountId)"></td>
+                      <td class="td num" x-text="line.debit ? Format.num(line.debit) : ''"></td>
+                      <td class="td num" x-text="line.kredit ? Format.num(line.kredit) : ''"></td>
+                    </tr>
+                  </template>
+                  <tr x-show="lines.length === 0">
+                    <td colspan="3" class="td py-8 text-center text-zinc-500">Isi jumlah untuk melihat debit dan kredit.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="flex items-center justify-between border-t border-zinc-200 px-4 py-3 text-sm">
+              <span class="text-zinc-500">Selisih</span>
+              <span class="font-medium tabular-nums" x-text="Format.num(totals.selisih)"></span>
+            </div>
+          </div>
+        </div>
+
+        <details class="card bg-zinc-50">
+          <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-700">Cara membaca halaman ini</summary>
+          <div class="border-t border-zinc-200 px-4 py-3 text-sm leading-relaxed text-zinc-600">
+            Template hanya jalan pintas ke jurnal yang sama. Pratinjau menunjukkan debit dan kredit sebelum disimpan, sehingga Anda bisa melihat bahwa “setor modal” menambah Kas dan Modal, sementara “prive” mengurangi Kas dan Ekuitas. Transfer antar rekening tidak menyentuh Pendapatan atau Beban.
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ============================= PIUTANG ============================= -->
+    <section x-show="$store.app.page === 'piutang'" x-cloak x-data="invoicePage('piutang')" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title" x-tooltip="'piutangUsaha'">Piutang</h1>
+          <p class="muted mt-1">Tagihan penjualan kredit per pelanggan, sisa, jatuh tempo, dan umur piutang.</p>
+        </div>
+        <button class="btn btn-primary" @click="openAdd()">Tagihan baru</button>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div class="card card-pad">
+            <p class="eyebrow">Total sisa</p>
+            <p class="mt-2 text-xl font-semibold tabular-nums" x-text="Format.rupiah(aging.total)"></p>
+          </div>
+          <div class="card card-pad">
+            <p class="eyebrow" x-tooltip="'umurPiutang'">Belum jatuh tempo</p>
+            <p class="mt-2 text-xl font-semibold tabular-nums" x-text="Format.rupiah(aging.buckets.belum)"></p>
+          </div>
+          <div class="card card-pad">
+            <p class="eyebrow">1–30 hari</p>
+            <p class="mt-2 text-xl font-semibold tabular-nums" x-text="Format.rupiah(aging.buckets.d1_30)"></p>
+          </div>
+          <div class="card card-pad">
+            <p class="eyebrow">31–60 hari</p>
+            <p class="mt-2 text-xl font-semibold tabular-nums" x-text="Format.rupiah(aging.buckets.d31_60)"></p>
+          </div>
+          <div class="card card-pad">
+            <p class="eyebrow">Lebih dari 60 hari</p>
+            <p class="mt-2 text-xl font-semibold tabular-nums" x-text="Format.rupiah(aging.buckets.d60)"></p>
+          </div>
+        </div>
+
+        <div class="card card-pad flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p class="muted">Umur piutang dihitung per tanggal:</p>
+          <input type="date" class="input sm:w-48" x-model="perTanggal">
+        </div>
+
+        <div class="card card-pad" x-show="adding" x-cloak>
+          <div class="flex items-start justify-between">
+            <p class="section-title">Tagihan piutang baru</p>
+            <button class="btn btn-ghost btn-sm" @click="cancelAdd()">Tutup</button>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <label class="label">Pelanggan</label>
+              <select class="input" x-model="form.partyId">
+                <template x-for="party in parties" :key="party.id">
+                  <option :value="party.id" x-text="party.nama"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="label">Tanggal</label>
+              <input type="date" class="input" x-model="form.tanggal">
+            </div>
+            <div>
+              <label class="label" x-tooltip="'jatuhTempo'">Jatuh tempo</label>
+              <input type="date" class="input" x-model="form.jatuhTempo">
+            </div>
+            <div>
+              <label class="label">Jumlah tagihan</label>
+              <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="form.total">
+            </div>
+            <div>
+              <label class="label">Akun pendapatan</label>
+              <select class="input" x-model="form.akunLawanId">
+                <template x-for="account in revenueAccounts" :key="account.id">
+                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="label" x-tooltip="'hpp'">HPP (opsional)</label>
+              <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="form.hpp">
+            </div>
+            <div>
+              <label class="label">Akun HPP</label>
+              <select class="input" x-model="form.akunHppId">
+                <template x-for="account in expenseAccounts" :key="account.id">
+                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
+                </template>
+              </select>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="label">Keterangan</label>
+              <input class="input" placeholder="Misalnya: Penjualan kredit 10 unit" x-model="form.keterangan">
+            </div>
+          </div>
+          <p class="mt-2 text-[11px] text-zinc-400">Jika HPP diisi, jurnal ikut mencatat Dr HPP dan Cr Persediaan Barang.</p>
+          <div class="mt-3 flex gap-2">
+            <button class="btn btn-primary" @click="save()">Simpan tagihan</button>
+            <button class="btn btn-outline" @click="cancelAdd()">Batal</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+            <p class="section-title">Daftar tagihan</p>
+            <span class="badge badge-outline" x-text="invoices.length + ' tagihan'"></span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr>
+                  <th class="th">Pelanggan</th>
+                  <th class="th">Tanggal</th>
+                  <th class="th" x-tooltip="'jatuhTempo'">Jatuh tempo</th>
+                  <th class="th num">Total</th>
+                  <th class="th num">Dibayar</th>
+                  <th class="th num">Sisa</th>
+                  <th class="th">Status</th>
+                  <th class="th text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="invoice in invoices" :key="invoice.id">
+                  <tr class="hover:bg-zinc-50">
+                    <td class="td">
+                      <p class="font-medium" x-text="invoice.party ? invoice.party.nama : '—'"></p>
+                      <p class="text-[11px] text-zinc-400" x-text="invoice.keterangan"></p>
+                    </td>
+                    <td class="td whitespace-nowrap" x-text="Format.tanggal(invoice.tanggal)"></td>
+                    <td class="td whitespace-nowrap" x-text="Format.tanggal(invoice.jatuhTempo)"></td>
+                    <td class="td num" x-text="Format.num(invoice.total)"></td>
+                    <td class="td num" x-text="Format.num(invoice.dibayar)"></td>
+                    <td class="td num font-medium" x-text="Format.num(invoice.sisa)" x-tooltip="invoice.tooltip"></td>
+                    <td class="td">
+                      <span class="badge" :class="invoice.status === 'lunas' ? 'badge-solid' : 'badge-outline'" x-text="statusLabel(invoice.status)"></span>
+                    </td>
+                    <td class="td">
+                      <div class="flex justify-end gap-1">
+                        <button class="btn btn-ghost btn-sm" @click="openPay(invoice)" :disabled="invoice.sisa <= 0">Terima pembayaran</button>
+                        <button class="btn btn-ghost btn-sm" @click="toggleHistory(invoice)" x-show="invoice.dibayar > 0">Riwayat</button>
+                        <button class="btn btn-ghost btn-sm" @click="remove(invoice)" :disabled="invoice.dibayar > 0">Hapus</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+                <tr x-show="invoices.length === 0">
+                  <td colspan="8" class="td py-8 text-center text-zinc-500">Belum ada tagihan piutang.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card card-pad" x-show="payingId && paying" x-cloak>
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="section-title">Terima pembayaran</p>
+              <p class="muted mt-1" x-text="paying ? (paying.party ? paying.party.nama : '') + ' · sisa ' + Format.rupiah(paying.sisa) : ''"></p>
+            </div>
+            <button class="btn btn-ghost btn-sm" @click="cancelPay()">Tutup</button>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-3">
+            <div>
+              <label class="label">Tanggal</label>
+              <input type="date" class="input" x-model="payForm.tanggal">
+            </div>
+            <div>
+              <label class="label">Jumlah</label>
+              <input type="number" min="0" step="1" class="input num" x-model.number="payForm.jumlah">
+            </div>
+            <div>
+              <label class="label">Rekening penerima</label>
+              <select class="input" x-model="payForm.akunKasId">
+                <template x-for="account in rekening" :key="account.id">
+                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <button class="btn btn-primary" @click="savePay()">Catat pembayaran</button>
+            <button class="btn btn-outline" @click="cancelPay()">Batal</button>
+          </div>
+        </div>
+
+        <details class="card bg-zinc-50">
+          <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-700">Cara membaca halaman ini</summary>
+          <div class="border-t border-zinc-200 px-4 py-3 text-sm leading-relaxed text-zinc-600">
+            Piutang adalah akun aset 1-1200. Membuat tagihan otomatis menambah Piutang Usaha dan Pendapatan. Menerima pembayaran mengurangi Piutang dan menambah rekening kas atau bank. Status tidak disimpan: selalu dihitung dari total tagihan dikurangi semua pembayaran, sehingga tidak bisa tidak sinkron.
+          </div>
+        </details>
+      </div>
+
+      <div x-show="historyId && historyInvoice" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-zinc-950/40" @click="historyId = null"></div>
+        <div class="relative w-full max-w-xl rounded-md border border-zinc-200 bg-white p-5 shadow-xl">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="section-title">Riwayat pembayaran</p>
+              <p class="muted mt-1" x-text="historyInvoice ? (historyInvoice.party ? historyInvoice.party.nama : '') + ' · total ' + Format.rupiah(historyInvoice.total) : ''"></p>
+            </div>
+            <button class="btn btn-ghost btn-sm" @click="historyId = null">Tutup</button>
+          </div>
+          <div class="mt-4 overflow-x-auto rounded-md border border-zinc-200">
+            <table class="w-full">
+              <thead class="bg-zinc-50">
+                <tr>
+                  <th class="th">Tanggal</th>
+                  <th class="th">Rekening</th>
+                  <th class="th num">Jumlah</th>
+                  <th class="th"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="payment in (historyInvoice ? paymentsOf(historyInvoice.id) : [])" :key="payment.id">
+                  <tr>
+                    <td class="td" x-text="Format.tanggal(payment.tanggal)"></td>
+                    <td class="td" x-text="$store.app.accName(payment.akunKasId)"></td>
+                    <td class="td num" x-text="Format.num(payment.jumlah)"></td>
+                    <td class="td text-right"><button class="btn btn-ghost btn-sm" @click="removePayment(payment)">Hapus</button></td>
+                  </tr>
+                </template>
+                <tr x-show="historyInvoice && paymentsOf(historyInvoice.id).length === 0">
+                  <td colspan="4" class="td py-6 text-center text-zinc-500">Belum ada pembayaran.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= UTANG ============================= -->
+    <section x-show="$store.app.page === 'utang'" x-cloak x-data="invoicePage('utang')" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title" x-tooltip="'utangUsaha'">Utang</h1>
+          <p class="muted mt-1">Tagihan pembelian kredit per pemasok, sisa, dan jatuh tempo.</p>
+        </div>
+        <button class="btn btn-primary" @click="openAdd()">Tagihan baru</button>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <div class="card card-pad" x-show="adding" x-cloak>
+          <div class="flex items-start justify-between">
+            <p class="section-title">Tagihan utang baru</p>
+            <button class="btn btn-ghost btn-sm" @click="cancelAdd()">Tutup</button>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <label class="label">Pemasok</label>
+              <select class="input" x-model="form.partyId">
+                <template x-for="party in parties" :key="party.id">
+                  <option :value="party.id" x-text="party.nama"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="label">Tanggal</label>
+              <input type="date" class="input" x-model="form.tanggal">
+            </div>
+            <div>
+              <label class="label" x-tooltip="'jatuhTempo'">Jatuh tempo</label>
+              <input type="date" class="input" x-model="form.jatuhTempo">
+            </div>
+            <div>
+              <label class="label">Jumlah tagihan</label>
+              <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="form.total">
+            </div>
+            <div>
+              <label class="label">Akun lawan</label>
+              <select class="input" x-model="form.akunLawanId">
+                <template x-for="account in utangLawanOptions" :key="account.id">
+                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
+                </template>
+              </select>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="label">Keterangan</label>
+              <input class="input" placeholder="Misalnya: Pembelian barang dagang" x-model="form.keterangan">
+            </div>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <button class="btn btn-primary" @click="save()">Simpan tagihan</button>
+            <button class="btn btn-outline" @click="cancelAdd()">Batal</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+            <p class="section-title">Daftar tagihan</p>
+            <span class="badge badge-outline" x-text="invoices.length + ' tagihan'"></span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr>
+                  <th class="th">Pemasok</th>
+                  <th class="th">Tanggal</th>
+                  <th class="th" x-tooltip="'jatuhTempo'">Jatuh tempo</th>
+                  <th class="th num">Total</th>
+                  <th class="th num">Dibayar</th>
+                  <th class="th num">Sisa</th>
+                  <th class="th">Status</th>
+                  <th class="th text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="invoice in invoices" :key="invoice.id">
+                  <tr class="hover:bg-zinc-50">
+                    <td class="td">
+                      <p class="font-medium" x-text="invoice.party ? invoice.party.nama : '—'"></p>
+                      <p class="text-[11px] text-zinc-400" x-text="invoice.keterangan"></p>
+                    </td>
+                    <td class="td whitespace-nowrap" x-text="Format.tanggal(invoice.tanggal)"></td>
+                    <td class="td whitespace-nowrap" x-text="Format.tanggal(invoice.jatuhTempo)"></td>
+                    <td class="td num" x-text="Format.num(invoice.total)"></td>
+                    <td class="td num" x-text="Format.num(invoice.dibayar)"></td>
+                    <td class="td num font-medium" x-text="Format.num(invoice.sisa)" x-tooltip="invoice.tooltip"></td>
+                    <td class="td">
+                      <span class="badge" :class="invoice.status === 'lunas' ? 'badge-solid' : 'badge-outline'" x-text="statusLabel(invoice.status)"></span>
+                    </td>
+                    <td class="td">
+                      <div class="flex justify-end gap-1">
+                        <button class="btn btn-ghost btn-sm" @click="openPay(invoice)" :disabled="invoice.sisa <= 0">Bayar utang</button>
+                        <button class="btn btn-ghost btn-sm" @click="toggleHistory(invoice)" x-show="invoice.dibayar > 0">Riwayat</button>
+                        <button class="btn btn-ghost btn-sm" @click="remove(invoice)" :disabled="invoice.dibayar > 0">Hapus</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+                <tr x-show="invoices.length === 0">
+                  <td colspan="8" class="td py-8 text-center text-zinc-500">Belum ada tagihan utang.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card card-pad" x-show="payingId && paying" x-cloak>
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="section-title">Bayar utang</p>
+              <p class="muted mt-1" x-text="paying ? (paying.party ? paying.party.nama : '') + ' · sisa ' + Format.rupiah(paying.sisa) : ''"></p>
+            </div>
+            <button class="btn btn-ghost btn-sm" @click="cancelPay()">Tutup</button>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-3">
+            <div>
+              <label class="label">Tanggal</label>
+              <input type="date" class="input" x-model="payForm.tanggal">
+            </div>
+            <div>
+              <label class="label">Jumlah</label>
+              <input type="number" min="0" step="1" class="input num" x-model.number="payForm.jumlah">
+            </div>
+            <div>
+              <label class="label">Rekening pembayar</label>
+              <select class="input" x-model="payForm.akunKasId">
+                <template x-for="account in rekening" :key="account.id">
+                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <button class="btn btn-primary" @click="savePay()">Catat pembayaran</button>
+            <button class="btn btn-outline" @click="cancelPay()">Batal</button>
+          </div>
+        </div>
+
+        <details class="card bg-zinc-50">
+          <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-700">Cara membaca halaman ini</summary>
+          <div class="border-t border-zinc-200 px-4 py-3 text-sm leading-relaxed text-zinc-600">
+            Utang adalah akun kewajiban 2-1100. Membuat tagihan pembelian otomatis menambah Persediaan atau Beban dan menambah Utang Usaha. Membayar utang mengurangi Utang dan mengurangi rekening kas atau bank. Pembayaran boleh sebagian, tetapi tidak boleh melebihi sisa tagihan.
+          </div>
+        </details>
+      </div>
+
+      <div x-show="historyId && historyInvoice" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-zinc-950/40" @click="historyId = null"></div>
+        <div class="relative w-full max-w-xl rounded-md border border-zinc-200 bg-white p-5 shadow-xl">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="section-title">Riwayat pembayaran</p>
+              <p class="muted mt-1" x-text="historyInvoice ? (historyInvoice.party ? historyInvoice.party.nama : '') + ' · total ' + Format.rupiah(historyInvoice.total) : ''"></p>
+            </div>
+            <button class="btn btn-ghost btn-sm" @click="historyId = null">Tutup</button>
+          </div>
+          <div class="mt-4 overflow-x-auto rounded-md border border-zinc-200">
+            <table class="w-full">
+              <thead class="bg-zinc-50">
+                <tr>
+                  <th class="th">Tanggal</th>
+                  <th class="th">Rekening</th>
+                  <th class="th num">Jumlah</th>
+                  <th class="th"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="payment in (historyInvoice ? paymentsOf(historyInvoice.id) : [])" :key="payment.id">
+                  <tr>
+                    <td class="td" x-text="Format.tanggal(payment.tanggal)"></td>
+                    <td class="td" x-text="$store.app.accName(payment.akunKasId)"></td>
+                    <td class="td num" x-text="Format.num(payment.jumlah)"></td>
+                    <td class="td text-right"><button class="btn btn-ghost btn-sm" @click="removePayment(payment)">Hapus</button></td>
+                  </tr>
+                </template>
+                <tr x-show="historyInvoice && paymentsOf(historyInvoice.id).length === 0">
+                  <td colspan="4" class="td py-6 text-center text-zinc-500">Belum ada pembayaran.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= BUKU BESAR ============================= -->
+    <section x-show="$store.app.page === 'bukuBesar'" x-cloak x-data="ledgerPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Buku Besar</h1>
+          <p class="muted mt-1">Semua baris jurnal untuk satu akun, lengkap dengan saldo berjalan.</p>
+        </div>
+        <button class="btn btn-outline" @click="$store.app.go('jurnal')">Buka Jurnal Umum</button>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <div class="card card-pad">
+          <div class="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label class="label">Akun</label>
+              <select class="input" x-model="accountId">
+                <template x-for="item in accounts" :key="item.id">
+                  <option :value="item.id" x-text="item.kode + ' — ' + item.nama + (item.aktif === false ? ' (nonaktif)' : '')"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="label">Dari tanggal (opsional)</label>
+              <input type="date" class="input" x-model="dari">
+            </div>
+            <div>
+              <label class="label">Sampai tanggal (opsional)</label>
+              <input type="date" class="input" x-model="sampai">
+            </div>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-2" x-show="account">
+            <span class="badge badge-outline" x-text="account ? account.tipe : ''"></span>
+            <span class="badge badge-outline" x-text="'Saldo normal ' + (account ? account.saldoNormal : '')" x-tooltip="'saldoNormal'"></span>
+            <span class="badge badge-outline" x-text="account && account.rekening ? 'Rekening' : 'Bukan rekening'"></span>
+          </div>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-4">
+          <div class="card card-pad">
+            <p class="eyebrow" x-tooltip="'saldoBerjalan'">Saldo awal</p>
+            <p class="mt-1 text-lg font-semibold tabular-nums" x-text="Format.num(movement.opening)"></p>
+          </div>
+          <div class="card card-pad">
+            <p class="eyebrow" x-tooltip="'debit'">Total debit</p>
+            <p class="mt-1 text-lg font-semibold tabular-nums" x-text="Format.num(movement.totalDebit)"></p>
+          </div>
+          <div class="card card-pad">
+            <p class="eyebrow" x-tooltip="'kredit'">Total kredit</p>
+            <p class="mt-1 text-lg font-semibold tabular-nums" x-text="Format.num(movement.totalKredit)"></p>
+          </div>
+          <div class="card card-pad">
+            <p class="eyebrow">Saldo akhir</p>
+            <p class="mt-1 text-lg font-semibold tabular-nums" x-text="Format.num(movement.akhir)"></p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
+            <p class="section-title" x-text="account ? account.kode + ' — ' + account.nama : 'Pilih akun'"></p>
+            <span class="badge badge-outline" x-text="movement.rows.length + ' baris'"></span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr>
+                  <th class="th">Tanggal</th>
+                  <th class="th">Nomor</th>
+                  <th class="th">Keterangan</th>
+                  <th class="th">Pihak</th>
+                  <th class="th num">Debit</th>
+                  <th class="th num">Kredit</th>
+                  <th class="th num">Saldo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="row in movement.rows" :key="row.line.id">
+                  <tr class="cursor-pointer hover:bg-zinc-50" @click="openDetail(row.journal.id)">
+                    <td class="td whitespace-nowrap" x-text="Format.tanggal(row.journal.tanggal)"></td>
+                    <td class="td whitespace-nowrap font-mono text-xs" x-text="row.journal.nomor"></td>
+                    <td class="td" x-text="row.journal.keterangan"></td>
+                    <td class="td text-zinc-500" x-text="partyLabel(row.line)"></td>
+                    <td class="td num" x-text="row.debit ? Format.num(row.debit) : ''"></td>
+                    <td class="td num" x-text="row.kredit ? Format.num(row.kredit) : ''"></td>
+                    <td class="td num font-medium" x-text="Format.num(row.saldo)"></td>
+                  </tr>
+                </template>
+                <tr x-show="movement.rows.length === 0">
+                  <td colspan="7" class="td py-8 text-center text-zinc-500">Belum ada mutasi untuk akun ini pada rentang tanggal tersebut.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <details class="card bg-zinc-50">
+          <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-700">Cara membaca halaman ini</summary>
+          <div class="border-t border-zinc-200 px-4 py-3 text-sm leading-relaxed text-zinc-600">
+            Buku Besar adalah kumpulan baris jurnal yang menyentuh satu akun. Saldo berjalan dihitung berurutan dari transaksi paling awal. Klik baris untuk melihat jurnal asalnya lengkap dengan akun lawan. Saldo akhir di sini adalah angka yang dipakai laporan.
+          </div>
+        </details>
+      </div>
+
+      <div x-show="detailId" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-zinc-950/40" @click="detailId = null"></div>
+        <div class="relative w-full max-w-2xl rounded-md border border-zinc-200 bg-white p-5 shadow-xl">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="section-title" x-text="detail ? detail.nomor : ''"></p>
+              <p class="muted mt-1" x-text="detail ? Format.tanggalPanjang(detail.tanggal) : ''"></p>
+            </div>
+            <button class="btn btn-ghost btn-sm" @click="detailId = null">Tutup</button>
+          </div>
+          <p class="mt-3 text-sm text-zinc-700" x-text="detail ? detail.keterangan : ''"></p>
+          <div class="mt-4 overflow-x-auto rounded-md border border-zinc-200">
+            <table class="w-full">
+              <thead class="bg-zinc-50">
+                <tr>
+                  <th class="th">Akun</th>
+                  <th class="th">Pihak</th>
+                  <th class="th num">Debit</th>
+                  <th class="th num">Kredit</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="line in (detail ? detail.lines : [])" :key="line.id">
+                  <tr>
+                    <td class="td" x-text="line.akun ? line.akun.kode + ' — ' + line.akun.nama : '—'"></td>
+                    <td class="td text-zinc-500" x-text="line.party ? line.party.nama : '—'"></td>
+                    <td class="td num" x-text="line.debit ? Format.num(line.debit) : ''"></td>
+                    <td class="td num" x-text="line.kredit ? Format.num(line.kredit) : ''"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= LAPORAN ============================= -->
+    <section x-show="$store.app.page === 'laporan'" x-cloak x-data="reportPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Laporan</h1>
+          <p class="muted mt-1">Semua angka dihitung dari jurnal. Klik angka untuk melihat penyusunnya.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button class="btn btn-outline" @click="printPage()">Cetak</button>
+          <button class="btn btn-outline" @click="$store.app.runTests()">Uji angka kunci</button>
+        </div>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <div class="card card-pad space-y-3">
+          <div class="flex flex-wrap gap-2">
+            <button class="btn" :class="tab === 'neracaSaldo' ? 'btn-primary' : 'btn-outline'" @click="tab = 'neracaSaldo'">Neraca Saldo</button>
+            <button class="btn" :class="tab === 'labaRugi' ? 'btn-primary' : 'btn-outline'" @click="tab = 'labaRugi'">Laba Rugi</button>
+            <button class="btn" :class="tab === 'neraca' ? 'btn-primary' : 'btn-outline'" @click="tab = 'neraca'">Neraca</button>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2 lg:max-w-xl">
+            <div x-show="tab === 'labaRugi'">
+              <label class="label">Dari tanggal</label>
+              <input type="date" class="input" x-model="dari">
+            </div>
+            <div>
+              <label class="label" x-text="tab === 'labaRugi' ? 'Sampai tanggal' : 'Posisi per tanggal'"></label>
+              <input type="date" class="input" x-model="sampai">
+            </div>
+          </div>
+          <p class="text-[11px] text-zinc-400" x-show="tab === 'labaRugi'">Laba Rugi mengukur satu periode, jadi memakai rentang tanggal.</p>
+          <p class="text-[11px] text-zinc-400" x-show="tab !== 'labaRugi'">Neraca dan Neraca Saldo mengukur posisi pada satu tanggal, dihitung dari seluruh jurnal sampai tanggal itu.</p>
+        </div>
+
+        <!-- Neraca Saldo -->
+        <div class="card" x-show="tab === 'neracaSaldo'" x-cloak>
+          <div class="flex flex-col gap-1 border-b border-zinc-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p class="section-title">Neraca Saldo</p>
+              <p class="muted" x-text="'Posisi per ' + Format.tanggalPanjang(sampai)"></p>
+            </div>
+            <span class="badge" :class="ns.seimbang ? 'badge-solid' : 'badge-outline'" x-text="ns.seimbang ? 'Seimbang' : 'Tidak seimbang'"></span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr>
+                  <th class="th">Kode</th>
+                  <th class="th">Akun</th>
+                  <th class="th">Tipe</th>
+                  <th class="th num" x-tooltip="'debit'">Debit</th>
+                  <th class="th num" x-tooltip="'kredit'">Kredit</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="row in ns.rows" :key="row.akun.id">
+                  <tr class="hover:bg-zinc-50">
+                    <td class="td whitespace-nowrap font-mono text-xs" x-text="row.akun.kode"></td>
+                    <td class="td">
+                      <button class="link" @click="openJournals(row.akun)" x-text="row.akun.nama"></button>
+                    </td>
+                    <td class="td text-zinc-500" x-text="row.akun.tipe"></td>
+                    <td class="td num" x-text="row.debit ? Format.num(row.debit) : ''"></td>
+                    <td class="td num" x-text="row.kredit ? Format.num(row.kredit) : ''"></td>
+                  </tr>
+                </template>
+                <tr x-show="ns.rows.length === 0">
+                  <td colspan="5" class="td py-8 text-center text-zinc-500">Belum ada saldo pada tanggal ini.</td>
+                </tr>
+              </tbody>
+              <tfoot class="bg-zinc-50">
+                <tr>
+                  <td class="td font-semibold" colspan="3">Total</td>
+                  <td class="td num font-semibold" x-text="Format.num(ns.totalDebit)"></td>
+                  <td class="td num font-semibold" x-text="Format.num(ns.totalKredit)"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div class="border-t border-zinc-200 px-4 py-3 text-xs text-zinc-500" x-tooltip="'neracaSaldo'">
+            Selisih debit dan kredit:
+            <span class="font-medium tabular-nums text-zinc-950" x-text="Format.num(ns.selisih)"></span>
+            — harus 0. Saldo abnormal ditampilkan di kolom lawan agar total tetap seimbang.
+          </div>
+        </div>
+
+        <!-- Laba Rugi -->
+        <div class="card" x-show="tab === 'labaRugi'" x-cloak>
+          <div class="border-b border-zinc-200 px-4 py-3">
+            <p class="section-title">Laba Rugi</p>
+            <p class="muted" x-text="Format.tanggal(dari) + ' – ' + Format.tanggal(sampai)"></p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr>
+                  <th class="th">Akun</th>
+                  <th class="th num">Rp</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="bg-zinc-50"><td class="td font-semibold" colspan="2">Pendapatan</td></tr>
+                <template x-for="row in lr.pendapatan" :key="row.akun.id">
+                  <tr>
+                    <td class="td pl-8">
+                      <button class="link" @click="openJournals(row.akun)" x-text="row.akun.kode + ' — ' + row.akun.nama"></button>
+                    </td>
+                    <td class="td num" x-text="Format.num(row.jumlah)"></td>
+                  </tr>
+                </template>
+                <tr>
+                  <td class="td pl-8 text-zinc-500">Subtotal pendapatan</td>
+                  <td class="td num" x-text="Format.num(lr.totalPendapatan)"></td>
+                </tr>
+
+                <tr class="bg-zinc-50"><td class="td font-semibold" colspan="2" x-tooltip="'hpp'">Harga Pokok Penjualan</td></tr>
+                <template x-for="row in lr.hpp" :key="row.akun.id">
+                  <tr>
+                    <td class="td pl-8">
+                      <button class="link" @click="openJournals(row.akun)" x-text="row.akun.kode + ' — ' + row.akun.nama"></button>
+                    </td>
+                    <td class="td num" x-text="Format.num(-row.jumlah)"></td>
+                  </tr>
+                </template>
+                <tr>
+                  <td class="td pl-8 text-zinc-500">Subtotal HPP</td>
+                  <td class="td num" x-text="Format.num(-lr.totalHpp)"></td>
+                </tr>
+
+                <tr class="border-t border-zinc-300">
+                  <td class="td font-semibold" x-tooltip="'labaKotor'">Laba kotor</td>
+                  <td class="td num font-semibold" x-text="Format.num(lr.labaKotor)"></td>
+                </tr>
+
+                <tr class="bg-zinc-50"><td class="td font-semibold" colspan="2">Beban operasional</td></tr>
+                <template x-for="row in lr.beban" :key="row.akun.id">
+                  <tr>
+                    <td class="td pl-8">
+                      <button class="link" @click="openJournals(row.akun)" x-text="row.akun.kode + ' — ' + row.akun.nama"></button>
+                    </td>
+                    <td class="td num" x-text="Format.num(-row.jumlah)"></td>
+                  </tr>
+                </template>
+                <tr>
+                  <td class="td pl-8 text-zinc-500">Subtotal beban</td>
+                  <td class="td num" x-text="Format.num(-lr.totalBeban)"></td>
+                </tr>
+              </tbody>
+              <tfoot class="border-t-2 border-zinc-950">
+                <tr>
+                  <td class="td text-base font-semibold" x-tooltip="'labaBersih'">Laba bersih</td>
+                  <td class="td num text-base font-semibold">
+                    <button class="link tabular-nums" @click="drillLabaBersih()" x-text="Format.num(lr.labaBersih)" x-tooltip="lr.tooltip"></button>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- Neraca -->
+        <div class="card" x-show="tab === 'neraca'" x-cloak>
+          <div class="flex flex-col gap-1 border-b border-zinc-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p class="section-title">Neraca</p>
+              <p class="muted" x-text="'Posisi per ' + Format.tanggalPanjang(sampai)"></p>
+            </div>
+            <span class="badge" :class="nc.seimbang ? 'badge-solid' : 'badge-outline'" x-text="nc.seimbang ? 'Seimbang' : 'Tidak seimbang'"></span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr>
+                  <th class="th">Akun</th>
+                  <th class="th num">Rp</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="bg-zinc-50"><td class="td font-semibold" colspan="2">Aset</td></tr>
+                <tr><td class="td pl-6 text-zinc-500" colspan="2">Aset lancar</td></tr>
+                <template x-for="row in nc.asetLancar" :key="row.akun.id">
+                  <tr>
+                    <td class="td pl-10"><button class="link" @click="openJournals(row.akun)" x-text="row.akun.kode + ' — ' + row.akun.nama"></button></td>
+                    <td class="td num" x-text="Format.num(row.jumlah)"></td>
+                  </tr>
+                </template>
+                <tr>
+                  <td class="td pl-10 text-zinc-500">Subtotal aset lancar</td>
+                  <td class="td num" x-text="Format.num(nc.asetLancar.reduce(function (s, r) { return s + r.jumlah; }, 0))"></td>
+                </tr>
+                <tr><td class="td pl-6 text-zinc-500" colspan="2">Aset tetap</td></tr>
+                <template x-for="row in nc.asetTetap" :key="row.akun.id">
+                  <tr>
+                    <td class="td pl-10"><button class="link" @click="openJournals(row.akun)" x-text="row.akun.kode + ' — ' + row.akun.nama"></button></td>
+                    <td class="td num" x-text="Format.num(row.jumlah)"></td>
+                  </tr>
+                </template>
+                <tr class="border-t border-zinc-300">
+                  <td class="td font-semibold">Total aset</td>
+                  <td class="td num font-semibold">
+                    <button class="link tabular-nums" @click="drillTotalAset()" x-text="Format.num(nc.totalAset)" x-tooltip="nc.tooltipAset"></button>
+                  </td>
+                </tr>
+
+                <tr class="bg-zinc-50"><td class="td font-semibold" colspan="2">Kewajiban</td></tr>
+                <tr><td class="td pl-6 text-zinc-500" colspan="2">Jangka pendek</td></tr>
+                <template x-for="row in nc.kewajibanPendek" :key="row.akun.id">
+                  <tr>
+                    <td class="td pl-10"><button class="link" @click="openJournals(row.akun)" x-text="row.akun.kode + ' — ' + row.akun.nama"></button></td>
+                    <td class="td num" x-text="Format.num(row.jumlah)"></td>
+                  </tr>
+                </template>
+                <tr><td class="td pl-6 text-zinc-500" colspan="2">Jangka panjang</td></tr>
+                <template x-for="row in nc.kewajibanPanjang" :key="row.akun.id">
+                  <tr>
+                    <td class="td pl-10"><button class="link" @click="openJournals(row.akun)" x-text="row.akun.kode + ' — ' + row.akun.nama"></button></td>
+                    <td class="td num" x-text="Format.num(row.jumlah)"></td>
+                  </tr>
+                </template>
+                <tr class="border-t border-zinc-300">
+                  <td class="td font-semibold">Total kewajiban</td>
+                  <td class="td num font-semibold">
+                    <button class="link tabular-nums" @click="drillTotalKewajiban()" x-text="Format.num(nc.totalKewajiban)"></button>
+                  </td>
+                </tr>
+
+                <tr class="bg-zinc-50"><td class="td font-semibold" colspan="2">Ekuitas</td></tr>
+                <template x-for="row in nc.ekuitas" :key="row.akun.id">
+                  <tr>
+                    <td class="td pl-10">
+                      <button class="link" @click="openJournals(row.akun)" x-text="row.akun.kode + ' — ' + row.akun.nama" x-tooltip="row.akun.kode === '3-1200' ? 'prive' : ''"></button>
+                    </td>
+                    <td class="td num" x-text="Format.num(row.jumlah)"></td>
+                  </tr>
+                </template>
+                <tr>
+                  <td class="td pl-10" x-tooltip="'labaBerjalan'">Laba berjalan</td>
+                  <td class="td num" x-text="Format.num(nc.labaBerjalan)"></td>
+                </tr>
+                <tr class="border-t border-zinc-300">
+                  <td class="td font-semibold">Total ekuitas</td>
+                  <td class="td num font-semibold">
+                    <button class="link tabular-nums" @click="drillTotalEkuitas()" x-text="Format.num(nc.totalEkuitas)"></button>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot class="border-t-2 border-zinc-950">
+                <tr>
+                  <td class="td font-semibold">Total kewajiban + ekuitas</td>
+                  <td class="td num font-semibold" x-text="Format.num(nc.totalKewajibanEkuitas)"></td>
+                </tr>
+                <tr>
+                  <td class="td text-zinc-500" x-tooltip="'barisPengecekan'">Pengecekan: aset − (kewajiban + ekuitas)</td>
+                  <td class="td num font-semibold">
+                    <span x-text="Format.num(nc.selisih)"></span>
+                    <span class="ml-2 badge" :class="nc.seimbang ? 'badge-solid' : 'badge-outline'" x-text="nc.seimbang ? 'Seimbang' : 'Periksa jurnal'"></span>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <details class="card bg-zinc-50">
+          <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-700">Cara membaca halaman ini</summary>
+          <div class="border-t border-zinc-200 px-4 py-3 text-sm leading-relaxed text-zinc-600">
+            Neraca Saldo memastikan total debit dan kredit semua akun sama. Laba Rugi memakai rentang tanggal karena mengukur kinerja satu periode, sedangkan Neraca memakai satu tanggal posisi. Laba berjalan di ekuitas adalah pendapatan dikurangi beban sejak awal tahun buku; tanpa baris itu Neraca tidak akan seimbang. Prive mengurangi ekuitas, bukan beban.
+          </div>
+        </details>
+      </div>
+
+      <div x-show="drill.open" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-zinc-950/40" @click="closeDrill()"></div>
+        <div class="relative w-full max-w-2xl rounded-md border border-zinc-200 bg-white p-5 shadow-xl">
+          <div class="flex items-start justify-between gap-4">
+            <p class="section-title" x-text="drill.title"></p>
+            <button class="btn btn-ghost btn-sm" @click="closeDrill()">Tutup</button>
+          </div>
+          <div class="mt-4 overflow-x-auto rounded-md border border-zinc-200">
+            <template x-if="drill.mode === 'akun'">
+              <table class="w-full">
+                <thead class="bg-zinc-50">
+                  <tr>
+                    <th class="th">Akun</th>
+                    <th class="th num">Jumlah</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="(row, index) in drill.rows" :key="index">
+                    <tr>
+                      <td class="td">
+                        <button class="link" x-show="row.akun" @click="openJournals(row.akun)" x-text="row.label"></button>
+                        <span x-show="!row.akun" x-text="row.label"></span>
+                      </td>
+                      <td class="td num" x-text="Format.num(row.jumlah)"></td>
+                    </tr>
+                  </template>
+                </tbody>
+                <tfoot class="bg-zinc-50">
+                  <tr>
+                    <td class="td font-semibold">Total</td>
+                    <td class="td num font-semibold" x-text="Format.num(drill.total)"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </template>
+            <template x-if="drill.mode === 'jurnal'">
+              <table class="w-full">
+                <thead class="bg-zinc-50">
+                  <tr>
+                    <th class="th">Tanggal</th>
+                    <th class="th">Nomor</th>
+                    <th class="th">Keterangan</th>
+                    <th class="th num">Debit</th>
+                    <th class="th num">Kredit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="(row, index) in drill.rows" :key="index">
+                    <tr>
+                      <td class="td whitespace-nowrap" x-text="Format.tanggal(row.journal.tanggal)"></td>
+                      <td class="td whitespace-nowrap font-mono text-xs" x-text="row.journal.nomor"></td>
+                      <td class="td" x-text="row.journal.keterangan"></td>
+                      <td class="td num" x-text="row.debit ? Format.num(row.debit) : ''"></td>
+                      <td class="td num" x-text="row.kredit ? Format.num(row.kredit) : ''"></td>
+                    </tr>
+                  </template>
+                  <tr x-show="drill.rows.length === 0">
+                    <td colspan="5" class="td py-6 text-center text-zinc-500">Tidak ada jurnal penyusun pada rentang ini.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </template>
+          </div>
+          <p class="mt-3 text-xs text-zinc-500" x-show="drill.mode === 'akun'">Klik nama akun untuk melihat jurnal penyusunnya.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= REKENING ============================= -->
+    <section x-show="$store.app.page === 'rekening'" x-cloak x-data="bankPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Rekening</h1>
+          <p class="muted mt-1">Kas dan bank adalah akun aset. Saldonya sama dengan saldo Buku Besar akun tersebut.</p>
+        </div>
+        <button class="btn btn-primary" @click="openAdd()">Tambah rekening</button>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <div class="card card-pad" x-show="adding" x-cloak>
+          <div class="flex items-start justify-between">
+            <p class="section-title">Rekening baru</p>
+            <button class="btn btn-ghost btn-sm" @click="cancelAdd()">Tutup</button>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-3">
+            <div class="sm:col-span-2">
+              <label class="label">Nama rekening</label>
+              <input class="input" placeholder="Misalnya: Bank Mandiri" x-model="addForm.nama">
+            </div>
+            <div>
+              <label class="label">No. rekening (opsional)</label>
+              <input class="input" placeholder="123-456-7890" x-model="addForm.noRekening">
+            </div>
+          </div>
+          <p class="mt-2 text-[11px] text-zinc-400">Kode akun 1-11xx dibuat otomatis. Saldo awal diisi lewat jurnal setor modal.</p>
+          <div class="mt-3 flex gap-2">
+            <button class="btn btn-primary" @click="saveAdd()">Simpan rekening</button>
+            <button class="btn btn-outline" @click="cancelAdd()">Batal</button>
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <template x-for="account in rekening" :key="account.id">
+            <div class="card card-pad">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <p class="section-title" x-text="account.nama"></p>
+                  <p class="mt-0.5 font-mono text-xs text-zinc-400" x-text="account.kode + (account.noRekening ? ' · ' + account.noRekening : '')"></p>
+                </div>
+                <span class="badge" :class="account.aktif === false ? 'badge-outline' : 'badge-solid'" x-text="account.aktif === false ? 'Nonaktif' : 'Aktif'"></span>
+              </div>
+              <p class="mt-4 text-2xl font-semibold tabular-nums" x-text="Format.rupiah(balance(account))"></p>
+              <p class="mt-1 text-xs text-zinc-500" x-text="countLines(account) + ' baris jurnal'"></p>
+              <button class="btn btn-outline btn-sm mt-4" @click="openLedger(account)">Buka Buku Besar</button>
+            </div>
+          </template>
+        </div>
+
+        <div class="card card-pad">
+          <div>
+            <p class="section-title" x-tooltip="'transfer'">Transfer antar rekening</p>
+            <p class="muted mt-1">Jurnal: debit rekening tujuan, kredit rekening asal. Laba dan total aset tidak berubah.</p>
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div>
+              <label class="label">Dari rekening</label>
+              <select class="input" x-model="transferForm.dariId">
+                <option value="">Pilih…</option>
+                <template x-for="account in rekening" :key="account.id">
+                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="label">Ke rekening</label>
+              <select class="input" x-model="transferForm.tujuanId">
+                <option value="">Pilih…</option>
+                <template x-for="account in rekening" :key="account.id">
+                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
+                </template>
+              </select>
+            </div>
+            <div>
+              <label class="label">Tanggal</label>
+              <input type="date" class="input" x-model="transferForm.tanggal">
+            </div>
+            <div>
+              <label class="label">Jumlah</label>
+              <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="transferForm.jumlah">
+            </div>
+            <div class="flex items-end">
+              <button class="btn btn-primary w-full" @click="transfer()">Transfer</button>
+            </div>
+            <div class="sm:col-span-2 lg:col-span-5">
+              <label class="label">Keterangan (opsional)</label>
+              <input class="input" placeholder="Misalnya: Pindah dana ke bank" x-model="transferForm.keterangan">
+            </div>
+          </div>
+        </div>
+
+        <details class="card bg-zinc-50">
+          <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-700">Cara membaca halaman ini</summary>
+          <div class="border-t border-zinc-200 px-4 py-3 text-sm leading-relaxed text-zinc-600">
+            Rekening bukan tabel terpisah: ia hanya akun Kas atau Bank yang ditandai. Karena itu saldo rekening selalu sama dengan Buku Besar akunnya. Transfer memindahkan saldo antar rekening tanpa menyentuh Pendapatan atau Beban, sehingga laba bersih dan total aset tidak berubah.
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ============================= INFORMASI ============================= -->
+    <section x-show="$store.app.page === 'informasi'" x-cloak class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Informasi</h1>
+          <p class="muted mt-1">Dasar-dasar akuntansi untuk orang awam: dari debit dan kredit sampai laporan.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button class="btn btn-outline" @click="$store.app.go('jurnal')">Buka Jurnal</button>
+          <button class="btn btn-primary" @click="$store.app.requestRestartScenario()">Ulangi skenario</button>
+        </div>
+      </header>
+
+      <div class="px-4 py-6 sm:px-8">
+        <div class="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <aside class="no-print hidden lg:block">
+            <div class="card card-pad sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto">
+              <p class="eyebrow">Daftar isi</p>
+              <nav class="mt-3 space-y-0.5 text-xs">
+                <a href="#info-ide" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">1. Ide dasar</a>
+                <a href="#info-persamaan" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">2. Persamaan akuntansi</a>
+                <a href="#info-debit" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">3. Debit dan kredit</a>
+                <a href="#info-jurnal" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">4. Jurnal</a>
+                <a href="#info-bukubesar" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">5. Buku besar</a>
+                <a href="#info-neracasaldo" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">6. Neraca saldo</a>
+                <a href="#info-labarugi" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">7. Laba rugi</a>
+                <a href="#info-neraca" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">8. Neraca</a>
+                <a href="#info-piutang" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">9. Piutang dan utang</a>
+                <a href="#info-rekening" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">10. Kas, bank, transfer</a>
+                <a href="#info-hpp" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">11. HPP dan persediaan</a>
+                <a href="#info-prive" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">12. Prive</a>
+                <a href="#info-alur" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">13. Alur satu transaksi</a>
+                <a href="#info-kesalahan" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">14. Kesalahan umum</a>
+                <a href="#info-belajar" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">15. Cara belajar</a>
+              </nav>
+            </div>
+          </aside>
+
+          <div class="max-w-3xl space-y-5">
+            <article id="info-ide" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">1 · Ide dasar</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Laporan lahir dari jurnal, bukan dari angka yang diketik</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Aplikasi ini hanya menyimpan <strong class="text-zinc-950">jurnal</strong>. Neraca, Laba Rugi, Buku Besar, dan Neraca Saldo semuanya dihitung ulang dari jurnal. Tidak ada angka laporan yang diketik langsung.</p>
+                <p>Aturan paling penting: <strong class="text-zinc-950">satu transaksi = satu jurnal</strong>, dan setiap jurnal minimal punya dua baris dengan total debit sama dengan total kredit.</p>
+                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                  <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Akibatnya</p>
+                  <p class="mt-1">Kalau ada angka yang aneh di laporan, penyebabnya selalu bisa ditelusuri ke jurnal yang membentuknya. Inilah gunanya tombol <span class="font-medium text-zinc-950">Detail</span> dan <span class="font-medium text-zinc-950">drill-down</span> di aplikasi.</p>
+                </div>
+              </div>
+            </article>
+
+            <article id="info-persamaan" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">2 · Persamaan akuntansi</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Aset = Kewajiban + Ekuitas</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Bayangkan usaha sebagai satu wadah. Semua yang dimiliki (aset) berasal dari dua sumber: utang ke pihak lain (kewajiban) dan kekayaan pemilik (ekuitas). Karena itu kedua sisi harus selalu sama.</p>
+                <div class="grid gap-2 sm:grid-cols-2">
+                  <div class="rounded-md border border-zinc-200 p-3">
+                    <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Laba Rugi</p>
+                    <p class="mt-1 font-medium text-zinc-950">Laba Bersih = Pendapatan − Beban</p>
+                    <p class="mt-1 text-xs">Mengukur kinerja satu periode.</p>
+                  </div>
+                  <div class="rounded-md border border-zinc-200 p-3">
+                    <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Ekuitas akhir</p>
+                    <p class="mt-1 font-medium text-zinc-950">Modal + Laba Ditahan + Laba Berjalan − Prive</p>
+                    <p class="mt-1 text-xs">Menjelaskan perubahan kekayaan pemilik.</p>
+                  </div>
+                </div>
+                <table class="w-full">
+                  <thead>
+                    <tr>
+                      <th class="th">Kelompok</th>
+                      <th class="th">Contoh</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td class="td font-medium">Aset</td><td class="td">Kas, Bank, Piutang, Persediaan, Peralatan</td></tr>
+                    <tr><td class="td font-medium">Kewajiban</td><td class="td">Utang Usaha, Utang Gaji, Utang Bank</td></tr>
+                    <tr><td class="td font-medium">Ekuitas</td><td class="td">Modal Pemilik, Laba Ditahan, Prive</td></tr>
+                    <tr><td class="td font-medium">Pendapatan</td><td class="td">Penjualan, Pendapatan Jasa</td></tr>
+                    <tr><td class="td font-medium">Beban</td><td class="td">HPP, Beban Gaji, Beban Sewa, Beban Listrik</td></tr>
+                  </tbody>
+                </table>
+                <p>Pada skenario bawaan: aset <strong class="text-zinc-950">57.800.000</strong> = kewajiban <strong class="text-zinc-950">7.000.000</strong> + ekuitas <strong class="text-zinc-950">50.800.000</strong>.</p>
+              </div>
+            </article>
+
+            <article id="info-debit" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">3 · Debit dan kredit</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Bukan “baik atau buruk”, hanya sisi kiri dan kanan</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Debit adalah sisi kiri jurnal, kredit adalah sisi kanan. Keduanya hanya penanda arah pencatatan. Untuk menentukan sisi mana yang dipakai, lihat <strong class="text-zinc-950">tipe akun</strong> dan apakah akun tersebut <strong class="text-zinc-950">bertambah atau berkurang</strong>.</p>
+                <table class="w-full">
+                  <thead>
+                    <tr>
+                      <th class="th">Tipe akun</th>
+                      <th class="th">Bertambah</th>
+                      <th class="th">Berkurang</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td class="td font-medium">Aset</td><td class="td">Debit</td><td class="td">Kredit</td></tr>
+                    <tr><td class="td font-medium">Beban</td><td class="td">Debit</td><td class="td">Kredit</td></tr>
+                    <tr><td class="td font-medium">Kewajiban</td><td class="td">Kredit</td><td class="td">Debit</td></tr>
+                    <tr><td class="td font-medium">Ekuitas</td><td class="td">Kredit</td><td class="td">Debit</td></tr>
+                    <tr><td class="td font-medium">Pendapatan</td><td class="td">Kredit</td><td class="td">Debit</td></tr>
+                  </tbody>
+                </table>
+                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                  <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Cara mengingat</p>
+                  <p class="mt-1"><strong class="text-zinc-950">Debit = ke mana nilainya pergi</strong> (aset yang diterima atau beban yang dikeluarkan). <strong class="text-zinc-950">Kredit = dari mana nilainya datang</strong> (modal, utang, atau pendapatan).</p>
+                </div>
+                <p><strong class="text-zinc-950">Tiga langkah praktis:</strong></p>
+                <ol class="list-decimal space-y-1 pl-5">
+                  <li>Sebutkan akun yang terlibat dan apakah akun itu bertambah atau berkurang.</li>
+                  <li>Terapkan tabel di atas.</li>
+                  <li>Pastikan total debit sama dengan total kredit.</li>
+                </ol>
+                <p class="rounded-md border border-zinc-200 p-3 text-xs">Pengecualian: <strong class="text-zinc-950">Prive</strong> bertipe Ekuitas tetapi saldo normalnya Debit karena ia mengurangi ekuitas. Bertambahnya Prive dicatat di debit.</p>
+                <p class="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs">Jangan tertukar: <strong class="text-zinc-950">“kredit” di jurnal</strong> adalah sisi kanan pencatatan, sedangkan <strong class="text-zinc-950">“jual kredit”</strong> berarti pembeli membayar belakangan. Dua hal yang berbeda.</p>
+              </div>
+            </article>
+
+            <article id="info-jurnal" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">4 · Jurnal</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Satu transaksi, satu jurnal, minimal dua baris</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Jurnal mencatat transaksi pada tanggal terjadinya. Satu jurnal boleh punya lebih dari dua baris jika transaksi memang menyentuh lebih dari dua akun.</p>
+                <p>Contoh jual tunai Rp 4.000.000 dengan harga pokok barang Rp 2.400.000:</p>
+                <div class="overflow-x-auto rounded-md border border-zinc-200">
+                  <table class="w-full">
+                    <thead class="bg-zinc-50">
+                      <tr><th class="th">Akun</th><th class="th num">Debit</th><th class="th num">Kredit</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td class="td">1-1100 Kas</td><td class="td num">4.000.000</td><td class="td num"></td></tr>
+                      <tr><td class="td">5-1100 Harga Pokok Penjualan</td><td class="td num">2.400.000</td><td class="td num"></td></tr>
+                      <tr><td class="td">4-1100 Penjualan</td><td class="td num"></td><td class="td num">4.000.000</td></tr>
+                      <tr><td class="td">1-1300 Persediaan Barang</td><td class="td num"></td><td class="td num">2.400.000</td></tr>
+                    </tbody>
+                    <tfoot class="bg-zinc-50">
+                      <tr><td class="td font-semibold">Total</td><td class="td num font-semibold">6.400.000</td><td class="td num font-semibold">6.400.000</td></tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <p>Nomor jurnal berurutan per bulan, misalnya <span class="font-mono text-xs">JU-2026-11-004</span>. Sumber jurnal bisa <strong class="text-zinc-950">manual</strong> (diketik di Jurnal Umum atau Transaksi Cepat), <strong class="text-zinc-950">tagihan</strong> (dari Piutang/Utang), atau <strong class="text-zinc-950">pembayaran</strong>.</p>
+                <p>Jurnal dari tagihan atau pembayaran tidak boleh diedit langsung di Jurnal Umum. Ubah lewat dokumen sumbernya agar Piutang, Utang, dan jurnal tetap sinkron.</p>
+              </div>
+            </article>
+
+            <article id="info-bukubesar" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">5 · Buku besar</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Semua mutasi satu akun, dengan saldo berjalan</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Jurnal menyimpan cerita per transaksi. Buku Besar menyusun ulang cerita itu <strong class="text-zinc-950">per akun</strong>. Setiap baris menampilkan debit, kredit, dan saldo setelah baris tersebut.</p>
+                <p>Contoh saldo Kas pada skenario: 50.000.000 (setor modal) − 5.000.000 (beli peralatan) + 4.000.000 (jual tunai) − 3.000.000 (sewa) − 800.000 (listrik) + 6.000.000 (pembayaran piutang) − 5.000.000 (bayar utang) − 1.000.000 (prive) = <strong class="text-zinc-950">45.200.000</strong>.</p>
+                <p>Klik baris di Buku Besar untuk melihat jurnal asal dan akun lawannya. Saldo akhir Buku Besar adalah angka yang dipakai laporan.</p>
+                <p class="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs">Saldo dihitung menurut sisi normal akun. Untuk akun aset dan beban: debit − kredit. Untuk kewajiban, ekuitas, dan pendapatan: kredit − debit.</p>
+              </div>
+            </article>
+
+            <article id="info-neracasaldo" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">6 · Neraca saldo</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Daftar saldo semua akun, sebagai alat kontrol</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Neraca Saldo menampilkan saldo akhir setiap akun pada satu tanggal. Akun bersaldo debit muncul di kolom Debit; akun bersaldo kredit muncul di kolom Kredit. Total kedua kolom harus sama.</p>
+                <div class="overflow-x-auto rounded-md border border-zinc-200">
+                  <table class="w-full">
+                    <thead class="bg-zinc-50">
+                      <tr><th class="th">Akun</th><th class="th num">Debit</th><th class="th num">Kredit</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td class="td">Kas</td><td class="td num">45.200.000</td><td class="td num"></td></tr>
+                      <tr><td class="td">Piutang Usaha</td><td class="td num">4.000.000</td><td class="td num"></td></tr>
+                      <tr><td class="td">Persediaan Barang</td><td class="td num">3.600.000</td><td class="td num"></td></tr>
+                      <tr><td class="td">Peralatan</td><td class="td num">5.000.000</td><td class="td num"></td></tr>
+                      <tr><td class="td">Utang Usaha</td><td class="td num"></td><td class="td num">7.000.000</td></tr>
+                      <tr><td class="td">Modal Pemilik</td><td class="td num"></td><td class="td num">50.000.000</td></tr>
+                      <tr><td class="td">Prive</td><td class="td num">1.000.000</td><td class="td num"></td></tr>
+                      <tr><td class="td">Penjualan</td><td class="td num"></td><td class="td num">14.000.000</td></tr>
+                      <tr><td class="td">Harga Pokok Penjualan</td><td class="td num">8.400.000</td><td class="td num"></td></tr>
+                      <tr><td class="td">Beban Sewa</td><td class="td num">3.000.000</td><td class="td num"></td></tr>
+                      <tr><td class="td">Beban Listrik dan Air</td><td class="td num">800.000</td><td class="td num"></td></tr>
+                    </tbody>
+                    <tfoot class="bg-zinc-50">
+                      <tr><td class="td font-semibold">Total</td><td class="td num font-semibold">71.000.000</td><td class="td num font-semibold">71.000.000</td></tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <p><strong class="text-zinc-950">Total 71.000.000 bukan total aset.</strong> Neraca Saldo masih memuat akun Pendapatan, Beban, dan Prive yang belum ditutup. Untuk kondisi keuangan, lihat Neraca; untuk kinerja, lihat Laba Rugi.</p>
+                <p>Neraca Saldo yang seimbang belum tentu benar. Salah memilih akun tetap bisa balance. Karena itu cocokkan dengan Buku Besar dan dokumen sumber. Saldo abnormal, misalnya akun aset bersaldo kredit, patut diperiksa.</p>
+              </div>
+            </article>
+
+            <article id="info-labarugi" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">7 · Laba rugi</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Mengukur kinerja satu periode</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Laba Rugi memakai <strong class="text-zinc-950">rentang tanggal</strong>, misalnya 1–30 November. Isinya pendapatan dikurangi HPP dan beban operasional.</p>
+                <div class="overflow-x-auto rounded-md border border-zinc-200">
+                  <table class="w-full">
+                    <thead class="bg-zinc-50">
+                      <tr><th class="th">Laba Rugi November</th><th class="th num">Rp</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td class="td">Penjualan</td><td class="td num">14.000.000</td></tr>
+                      <tr><td class="td">Harga Pokok Penjualan</td><td class="td num">(8.400.000)</td></tr>
+                      <tr><td class="td font-medium">Laba kotor</td><td class="td num font-medium">5.600.000</td></tr>
+                      <tr><td class="td">Beban Sewa</td><td class="td num">(3.000.000)</td></tr>
+                      <tr><td class="td">Beban Listrik dan Air</td><td class="td num">(800.000)</td></tr>
+                      <tr><td class="td font-semibold">Laba bersih</td><td class="td num font-semibold">1.800.000</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p>HPP adalah modal barang yang <strong class="text-zinc-950">terjual</strong>, bukan barang yang dibeli. Beban operasional adalah biaya menjalankan usaha.</p>
+                <p class="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs"><strong class="text-zinc-950">Laba tidak sama dengan uang di kas.</strong> Penjualan kredit menambah laba sebelum pelanggan membayar. Pembelian aset dan pembayaran utang mengurangi kas tetapi tidak selalu mengurangi laba.</p>
+              </div>
+            </article>
+
+            <article id="info-neraca" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">8 · Neraca</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Potret kondisi usaha pada satu tanggal</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Neraca memakai <strong class="text-zinc-950">satu tanggal posisi</strong>, misalnya 30 November, dan menghitung seluruh jurnal sampai tanggal itu. Isinya aset, kewajiban, dan ekuitas.</p>
+                <div class="overflow-x-auto rounded-md border border-zinc-200">
+                  <table class="w-full">
+                    <thead class="bg-zinc-50">
+                      <tr><th class="th">Neraca 30 November</th><th class="th num">Rp</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr><td class="td">Kas</td><td class="td num">45.200.000</td></tr>
+                      <tr><td class="td">Piutang Usaha</td><td class="td num">4.000.000</td></tr>
+                      <tr><td class="td">Persediaan Barang</td><td class="td num">3.600.000</td></tr>
+                      <tr><td class="td">Peralatan</td><td class="td num">5.000.000</td></tr>
+                      <tr><td class="td font-semibold">Total aset</td><td class="td num font-semibold">57.800.000</td></tr>
+                      <tr><td class="td">Utang Usaha</td><td class="td num">7.000.000</td></tr>
+                      <tr><td class="td">Modal Pemilik</td><td class="td num">50.000.000</td></tr>
+                      <tr><td class="td">Prive</td><td class="td num">(1.000.000)</td></tr>
+                      <tr><td class="td">Laba berjalan</td><td class="td num">1.800.000</td></tr>
+                      <tr><td class="td font-semibold">Total kewajiban + ekuitas</td><td class="td num font-semibold">57.800.000</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p><strong class="text-zinc-950">Laba berjalan</strong> adalah laba periode ini yang belum dipindahkan ke Laba Ditahan. Tanpa baris ini, Neraca tidak akan seimbang. <strong class="text-zinc-950">Prive</strong> tampil negatif karena mengurangi ekuitas.</p>
+                <p>Baris pengecekan: aset − (kewajiban + ekuitas) harus 0. Jika tidak 0, ada data jurnal yang rusak atau akun dengan tipe yang belum benar.</p>
+              </div>
+            </article>
+
+            <article id="info-piutang" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">9 · Piutang dan utang</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Dua sisi transaksi kredit</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p><strong class="text-zinc-950">Piutang</strong> adalah hak menerima uang (aset). <strong class="text-zinc-950">Utang</strong> adalah kewajiban membayar (kewajiban). Keduanya bukan modul terpisah dari jurnal: tagihan dan pembayaran hanya membuat jurnal otomatis dengan akun 1-1200 atau 2-1100.</p>
+                <table class="w-full">
+                  <thead>
+                    <tr><th class="th">Aksi</th><th class="th">Jurnal otomatis</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td class="td">Jual kredit</td><td class="td">Debit Piutang Usaha, Kredit Penjualan</td></tr>
+                    <tr><td class="td">Terima pembayaran piutang</td><td class="td">Debit Kas/Bank, Kredit Piutang Usaha</td></tr>
+                    <tr><td class="td">Beli kredit</td><td class="td">Debit Persediaan/Beban, Kredit Utang Usaha</td></tr>
+                    <tr><td class="td">Bayar utang</td><td class="td">Debit Utang Usaha, Kredit Kas/Bank</td></tr>
+                  </tbody>
+                </table>
+                <p>Status tagihan tidak disimpan. Aplikasi selalu menghitung <strong class="text-zinc-950">sisa = total − semua pembayaran</strong>, sehingga status tidak bisa tidak sinkron. Pembayaran boleh sebagian, tetapi tidak boleh melebihi sisa.</p>
+                <p><strong class="text-zinc-950">Umur piutang</strong> mengelompokkan sisa tagihan menurut lamanya lewat jatuh tempo: belum jatuh tempo, 1–30 hari, 31–60 hari, dan lebih dari 60 hari.</p>
+                <p class="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs">Jangan mencatat penjualan kredit lewat Piutang <em>dan</em> lagi lewat Jurnal Umum. Itu membuat pendapatan dan piutang menjadi dobel. Satu transaksi, satu pintu.</p>
+              </div>
+            </article>
+
+            <article id="info-rekening" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">10 · Kas, bank, dan transfer</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Rekening hanyalah akun aset yang ditandai</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Kas dan Bank BCA adalah akun aset dengan saldo normal debit. Karena itu saldo rekening selalu sama dengan saldo Buku Besar akunnya; tidak ada data ganda.</p>
+                <p>Transfer antar rekening dicatat: <strong class="text-zinc-950">Debit rekening tujuan, Kredit rekening asal</strong>. Contoh transfer Rp 10.000.000 dari Kas ke Bank BCA: Debit Bank BCA 10.000.000, Kredit Kas 10.000.000.</p>
+                <p>Transfer <strong class="text-zinc-950">bukan pendapatan dan bukan beban</strong>. Laba bersih dan total aset tidak berubah; hanya bentuk asetnya yang berpindah.</p>
+                <p class="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs">Saldo rekening negatif (dalam tanda kurung) biasanya berarti ada pengeluaran dari rekening itu tanpa dana masuk yang cukup, atau salah memilih rekening saat mencatat. Telusuri lewat Buku Besar akun tersebut.</p>
+              </div>
+            </article>
+
+            <article id="info-hpp" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">11 · HPP dan persediaan</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Harga Pokok Penjualan adalah modal barang yang terjual</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Kalau menjual barang dagang, ada dua hal yang terjadi: pembeli membayar harga jual, dan persediaan berkurang sebesar modal barang. Karena itu jurnal penjualan bisa punya empat baris.</p>
+                <p>Contoh jual tunai Rp 4.000.000 dengan HPP Rp 2.400.000: Debit Kas 4.000.000, Debit HPP 2.400.000, Kredit Penjualan 4.000.000, Kredit Persediaan 2.400.000.</p>
+                <p>Laba kotor = penjualan − HPP = 1.600.000. Ini laba sebelum beban operasional.</p>
+                <p class="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs">Di aplikasi, HPP bersifat opsional agar fleksibel. Tetapi kalau HPP dikosongkan, Persediaan tidak berkurang dan laba menjadi lebih besar dari seharusnya. Untuk usaha dagang, isi HPP.</p>
+              </div>
+            </article>
+
+            <article id="info-prive" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">12 · Prive</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Pengambilan pemilik, bukan beban usaha</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Prive adalah uang atau aset usaha yang diambil pemilik untuk keperluan pribadi. Jurnalnya: <strong class="text-zinc-950">Debit Prive, Kredit Kas/Bank</strong>.</p>
+                <p>Prive tidak masuk Laba Rugi karena bukan biaya menjalankan usaha. Ia mengurangi ekuitas dan tampil sebagai pengurang modal di Neraca. Neraca tetap seimbang karena aset dan ekuitas sama-sama turun.</p>
+                <p class="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs">Bandingkan: gaji karyawan adalah beban (mengurangi laba), sedangkan prive adalah pengambilan pemilik (mengurangi ekuitas). Jangan mencampur keduanya.</p>
+              </div>
+            </article>
+
+            <article id="info-alur" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">13 · Alur satu transaksi</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Dari dokumen sampai laporan</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Misalnya jual kredit Rp 10.000.000 dengan HPP Rp 6.000.000:</p>
+                <ol class="list-decimal space-y-2 pl-5">
+                  <li><strong class="text-zinc-950">Dokumen:</strong> buat tagihan Piutang untuk Pelanggan B.</li>
+                  <li><strong class="text-zinc-950">Jurnal otomatis:</strong> Debit Piutang Usaha 10.000.000, Debit HPP 6.000.000, Kredit Penjualan 10.000.000, Kredit Persediaan 6.000.000.</li>
+                  <li><strong class="text-zinc-950">Buku Besar:</strong> Piutang +10.000.000, HPP +6.000.000, Penjualan +10.000.000, Persediaan −6.000.000.</li>
+                  <li><strong class="text-zinc-950">Neraca Saldo:</strong> total debit dan kredit tetap sama.</li>
+                  <li><strong class="text-zinc-950">Laba Rugi:</strong> pendapatan +10.000.000, HPP 6.000.000, laba kotor +4.000.000.</li>
+                  <li><strong class="text-zinc-950">Neraca:</strong> piutang +10.000.000, persediaan −6.000.000, ekuitas +4.000.000 melalui laba berjalan.</li>
+                  <li><strong class="text-zinc-950">Pembayaran:</strong> saat pelanggan membayar Rp 6.000.000, Debit Kas 6.000.000 dan Kredit Piutang 6.000.000. Sisa piutang menjadi Rp 4.000.000; Laba Rugi tidak berubah.</li>
+                </ol>
+                <p>Perhatikan: transaksi yang sama tidak pernah diketik dua kali. Dokumen membuat jurnal, lalu semua laporan membaca jurnal.</p>
+              </div>
+            </article>
+
+            <article id="info-kesalahan" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">14 · Kesalahan umum</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Hal yang sering membingungkan pemula</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <ul class="list-disc space-y-2 pl-5">
+                  <li><strong class="text-zinc-950">Menganggap debit selalu baik dan kredit selalu buruk.</strong> Keduanya hanya sisi pencatatan.</li>
+                  <li><strong class="text-zinc-950">Mengisi debit dan kredit di baris yang sama.</strong> Satu baris hanya boleh salah satu.</li>
+                  <li><strong class="text-zinc-950">Menggabungkan beberapa transaksi dalam satu jurnal harian.</strong> Satu transaksi sebaiknya satu jurnal agar mudah ditelusuri.</li>
+                  <li><strong class="text-zinc-950">Menganggap prive sebagai beban.</strong> Prive mengurangi ekuitas, bukan laba.</li>
+                  <li><strong class="text-zinc-950">Menganggap transfer antar rekening sebagai pendapatan.</strong> Transfer hanya memindahkan aset.</li>
+                  <li><strong class="text-zinc-950">Tidak mencatat HPP saat menjual persediaan.</strong> Persediaan tidak berkurang dan laba menjadi terlalu besar.</li>
+                  <li><strong class="text-zinc-950">Menganggap Neraca Saldo sama dengan Neraca.</strong> Neraca Saldo adalah daftar saldo semua akun, termasuk pendapatan dan beban.</li>
+                  <li><strong class="text-zinc-950">Menganggap laba sama dengan saldo kas.</strong> Laba adalah kinerja; kas adalah posisi uang.</li>
+                  <li><strong class="text-zinc-950">Mencatat satu transaksi lewat dua modul.</strong> Ini membuat jurnal, piutang, atau pendapatan menjadi dobel.</li>
+                  <li><strong class="text-zinc-950">Membiarkan jurnal tidak seimbang.</strong> Selisih harus 0 sebelum disimpan.</li>
+                </ul>
+              </div>
+            </article>
+
+            <article id="info-belajar" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">15 · Cara belajar</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Latihan 15 menit dengan skenario bawaan</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <ol class="list-decimal space-y-2 pl-5">
+                  <li>Klik <strong class="text-zinc-950">Ulangi skenario</strong> agar 10 transaksi November 2026 dimuat.</li>
+                  <li>Buka <strong class="text-zinc-950">Jurnal Umum</strong>, pilih satu jurnal, lalu baca baris debit dan kreditnya.</li>
+                  <li>Buka <strong class="text-zinc-950">Buku Besar</strong> dan pilih Kas. Cocokkan saldo berjalannya dengan urutan transaksi.</li>
+                  <li>Buka <strong class="text-zinc-950">Laporan → Laba Rugi</strong>. Cocokkan Laba Bersih Rp 1.800.000 dengan perhitungan manual.</li>
+                  <li>Buka <strong class="text-zinc-950">Laporan → Neraca</strong>. Cocokkan Total Aset Rp 57.800.000 dan pastikan baris pengecekan 0.</li>
+                  <li>Buka <strong class="text-zinc-950">Laporan → Neraca Saldo</strong>. Pastikan total debit = total kredit Rp 71.000.000.</li>
+                  <li>Setelah paham, klik <strong class="text-zinc-950">Clear data</strong> lalu catat transaksi Anda sendiri dari awal.</li>
+                </ol>
+                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                  <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Pertanyaan latihan</p>
+                  <ul class="mt-2 list-disc space-y-1 pl-4 text-xs">
+                    <li>Mengapa Prive tidak mengurangi Laba Bersih, tetapi Kas tetap berkurang?</li>
+                    <li>Apa yang berubah di Neraca jika Pelanggan B melunasi sisa piutang Rp 4.000.000? Apakah Laba Rugi berubah?</li>
+                    <li>Jika pembelian persediaan Rp 12.000.000 dibayar tunai, akun mana yang berganti dan apakah total aset berubah?</li>
+                    <li>Mengapa Laba Rugi hanya terpengaruh transaksi 4, 5, 6, dan 7, padahal semua transaksi tercatat di jurnal?</li>
+                  </ul>
+                </div>
+                <div class="flex flex-wrap gap-2 pt-1">
+                  <button class="btn btn-primary btn-sm" @click="$store.app.requestRestartScenario()">Ulangi skenario</button>
+                  <button class="btn btn-outline btn-sm" @click="$store.app.go('jurnal')">Jurnal Umum</button>
+                  <button class="btn btn-outline btn-sm" @click="$store.app.go('bukuBesar')">Buku Besar</button>
+                  <button class="btn btn-outline btn-sm" @click="$store.app.go('laporan')">Laporan</button>
+                </div>
+                <p class="border-t border-zinc-200 pt-3 text-xs text-zinc-400">Prototype ini sengaja belum memuat pajak, penyusutan, penutupan periode, multi-user, dan rekonsiliasi bank. Fokusnya memahami alur dasar jurnal sampai laporan.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- toast -->
+<div class="no-print pointer-events-none fixed bottom-4 right-4 z-50 w-80 space-y-2">
+  <template x-for="item in $store.toast.items" :key="item.id">
+    <div class="pointer-events-auto rounded-md border bg-white px-3 py-2 text-sm shadow-lg"
+      :class="item.type === 'err' ? 'border-zinc-950 border-2 text-zinc-950' : 'border-zinc-200 text-zinc-700'">
+      <span x-text="item.message"></span>
+    </div>
+  </template>
+</div>
+
+<!-- tooltip -->
+<div x-cloak x-show="$store.tooltip.open"
+  class="pointer-events-none fixed z-[60] max-w-[280px] rounded-md bg-zinc-950 px-2.5 py-1.5 text-xs leading-snug text-white shadow-lg"
+  :style="'top:' + $store.tooltip.y + 'px; left:' + $store.tooltip.x + 'px; transform:' + ($store.tooltip.placement === 'top' ? 'translateY(-100%)' : 'none')"
+  x-text="$store.tooltip.text"></div>
+
+<!-- dialog -->
+<div x-cloak x-show="$store.app.dialog.open" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-zinc-950/40" @click="$store.app.closeDialog()"></div>
+  <div class="relative w-full max-w-md rounded-md border border-zinc-200 bg-white p-5 shadow-xl">
+    <h3 class="text-base font-semibold text-zinc-950" x-text="$store.app.dialog.title"></h3>
+    <p class="mt-2 text-sm leading-relaxed text-zinc-500" x-text="$store.app.dialog.message"></p>
+    <template x-if="$store.app.dialog.details.length">
+      <ul class="mt-3 max-h-64 space-y-1 overflow-y-auto rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
+        <template x-for="(detail, index) in $store.app.dialog.details" :key="index">
+          <li x-text="detail"></li>
+        </template>
+      </ul>
+    </template>
+    <div class="mt-5 flex justify-end gap-2">
+      <button class="btn btn-outline" x-show="!!$store.app.dialog.onConfirm" @click="$store.app.closeDialog()">Batal</button>
+      <button class="btn btn-primary" @click="$store.app.confirmDialog()" x-text="$store.app.dialog.confirmLabel"></button>
+    </div>
+  </div>
+</div>
+
+<script src="js/format.js"></script>
+<script src="js/glosarium.js"></script>
+<script src="js/store.js"></script>
+<script src="js/ledger.js"></script>
+<script src="js/report.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/app.js"></script>
+<script src="js/selftest.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>
