@@ -189,19 +189,34 @@
 
   function dibayarTagihan(state, invoiceId) {
     return state.payments.reduce(function (sum, payment) {
-      return payment.invoiceId === invoiceId ? sum + (Number(payment.jumlah) || 0) : sum;
+      if (payment.invoiceId !== invoiceId) return sum;
+      if (payment.jenis === 'retur') return sum;
+      return sum + (Number(payment.jumlah) || 0);
+    }, 0);
+  }
+
+  function totalReturPotong(state, invoiceId) {
+    return (state.purchaseReturns || []).reduce(function (sum, retur) {
+      if (retur.invoiceId !== invoiceId) return sum;
+      if (retur.status !== 'confirmed') return sum;
+      if (retur.jenis !== 'potong_invoice') return sum;
+      return sum + (Number(retur.total) || 0);
     }, 0);
   }
 
   function sisaTagihan(state, invoiceId) {
     var invoice = state.invoices.find(function (item) { return item.id === invoiceId; });
     if (!invoice) return 0;
-    return (Number(invoice.total) || 0) - dibayarTagihan(state, invoiceId);
+    var net = (Number(invoice.total) || 0) - totalReturPotong(state, invoiceId);
+    var sisa = net - dibayarTagihan(state, invoiceId);
+    return Math.max(0, sisa);
   }
 
-  function statusTagihan(total, dibayar) {
+  function statusTagihan(total, dibayar, retur) {
+    var net = (Number(total) || 0) - (Number(retur) || 0);
+    if (net <= 0) return 'lunas';
     if ((Number(dibayar) || 0) <= 0) return 'belum';
-    if ((Number(total) || 0) - (Number(dibayar) || 0) <= 0) return 'lunas';
+    if ((Number(dibayar) || 0) >= net) return 'lunas';
     return 'sebagian';
   }
 
@@ -282,9 +297,11 @@
     return dates.length ? dates[dates.length - 1] : Format.todayISO();
   }
 
-  function tooltipSisaPiutang(invoice, dibayar, sisa) {
-    return 'Tagihan ' + Format.num(invoice.total) + ' dikurangi pembayaran ' + Format.num(dibayar) +
-      ' = sisa ' + Format.num(sisa);
+  function tooltipSisaPiutang(invoice, dibayar, sisa, retur) {
+    var text = 'Tagihan ' + Format.num(invoice.total);
+    if (Number(retur) > 0) text += ' dikurangi retur ' + Format.num(retur);
+    text += ' dikurangi pembayaran ' + Format.num(dibayar) + ' = sisa ' + Format.num(sisa);
+    return text;
   }
 
   global.Report = {
@@ -297,6 +314,7 @@
     labaBersih: labaBersih,
     neraca: neraca,
     dibayarTagihan: dibayarTagihan,
+    totalReturPotong: totalReturPotong,
     sisaTagihan: sisaTagihan,
     statusTagihan: statusTagihan,
     umurPiutang: umurPiutang,

@@ -12,6 +12,7 @@
     ['1-1200', 'Piutang Usaha', 'Aset', 'Debit', false, false, ''],
     ['1-1300', 'Persediaan Barang', 'Aset', 'Debit', false, false, ''],
     ['1-1400', 'Perlengkapan', 'Aset', 'Debit', false, false, ''],
+    ['1-1500', 'Piutang Supplier', 'Aset', 'Debit', false, false, ''],
     ['1-2100', 'Peralatan', 'Aset', 'Debit', false, false, ''],
     ['2-1100', 'Utang Usaha', 'Kewajiban', 'Kredit', false, false, ''],
     ['2-1200', 'Utang Gaji', 'Kewajiban', 'Kredit', false, false, ''],
@@ -47,34 +48,55 @@
         aktif: true,
         rekening: !!row[4],
         noRekening: row[6],
-        hpp: !!row[5]
+        hpp: !!row[5],
+        dikunci: row[0] === '1-1300' || row[0] === '2-1100'
       };
     });
   }
 
   function parties() {
     return [
-      { id: PARTY_PEMASOK, nama: 'Pemasok A', jenis: 'pemasok', kontak: 'sales@pemasok-a.co.id' },
-      { id: PARTY_PELANGGAN, nama: 'Pelanggan B', jenis: 'pelanggan', kontak: 'b@pelanggan-b.co.id' }
+      {
+        id: PARTY_PEMASOK,
+        kode: 'SUP-001',
+        nama: 'Pemasok A',
+        jenis: 'pemasok',
+        kontak: 'sales@pemasok-a.co.id',
+        telepon: '021-555-0101',
+        alamat: 'Jl. Pemasok No. 1',
+        terminBayar: 30,
+        aktif: true
+      },
+      {
+        id: PARTY_PELANGGAN,
+        kode: 'CUS-001',
+        nama: 'Pelanggan B',
+        jenis: 'pelanggan',
+        kontak: 'b@pelanggan-b.co.id',
+        telepon: '',
+        alamat: '',
+        terminBayar: 30,
+        aktif: true
+      }
     ];
   }
 
   function stamp(scenario) {
     var now = new Date().toISOString();
-    return { createdAt: now, updatedAt: now, scenario: !!scenario };
+    return {
+      createdAt: now,
+      updatedAt: now,
+      scenario: !!scenario,
+      scenarioType: scenario ? 'legacy' : null
+    };
   }
 
   function bootstrap() {
-    return {
-      version: 1,
-      accounts: accounts(),
-      parties: parties(),
-      journals: [],
-      journalLines: [],
-      invoices: [],
-      payments: [],
-      meta: stamp(false)
-    };
+    var state = global.Store ? global.Store.emptyState() : { version: 1 };
+    state.accounts = accounts();
+    state.parties = parties();
+    state.meta = stamp(false);
+    return state;
   }
 
   function scenario() {
@@ -102,7 +124,7 @@
       };
       var result = Ledger.createJournal(state, draft);
       if (!result.ok) {
-        throw new Error('Skenario gagal: ' + keterangan + ' — ' + result.errors.join(' '));
+        throw new Error('Skenario gagal: ' + keterangan + ' - ' + result.errors.join(' '));
       }
       return result.journal;
     }
@@ -133,7 +155,7 @@
       hpp: 0
     };
     state.invoices.push(invoiceUtang);
-    addJournal('2026-11-03', 'Tagihan pembelian — Pemasok A', [
+    addJournal('2026-11-03', 'Tagihan pembelian - Pemasok A', [
       ['1-1300', 12000000, 0, PARTY_PEMASOK],
       ['2-1100', 0, 12000000, PARTY_PEMASOK]
     ], { sumber: 'tagihan', refId: invoiceUtang.id });
@@ -160,7 +182,7 @@
       hpp: 6000000
     };
     state.invoices.push(invoicePiutang);
-    addJournal('2026-11-05', 'Penjualan kredit — Pelanggan B', [
+    addJournal('2026-11-05', 'Penjualan kredit - Pelanggan B', [
       ['1-1200', 10000000, 0, PARTY_PELANGGAN],
       ['5-1100', 6000000, 0],
       ['4-1100', 0, 10000000],
@@ -188,7 +210,7 @@
       akunKasId: id('1-1100')
     };
     state.payments.push(paymentPiutang);
-    addJournal('2026-11-08', 'Penerimaan pembayaran — Pelanggan B', [
+    addJournal('2026-11-08', 'Penerimaan pembayaran - Pelanggan B', [
       ['1-1100', 6000000, 0],
       ['1-1200', 0, 6000000, PARTY_PELANGGAN]
     ], { sumber: 'pembayaran', refId: paymentPiutang.id });
@@ -202,7 +224,7 @@
       akunKasId: id('1-1100')
     };
     state.payments.push(paymentUtang);
-    addJournal('2026-11-09', 'Pembayaran utang — Pemasok A', [
+    addJournal('2026-11-09', 'Pembayaran utang - Pemasok A', [
       ['2-1100', 5000000, 0, PARTY_PEMASOK],
       ['1-1100', 0, 5000000]
     ], { sumber: 'pembayaran', refId: paymentUtang.id });

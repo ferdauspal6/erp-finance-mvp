@@ -26,7 +26,24 @@
     akunLawan: 'Akun pasangan dalam jurnal otomatis. Misalnya penjualan kredit memasangkan Piutang Usaha dengan Penjualan.',
     nomorJurnal: 'Nomor urut jurnal per bulan, dipakai untuk menelusuri kembali ke sumber pencatatan.',
     saldoBerjalan: 'Saldo akun setelah setiap baris jurnal dihitung berurutan dari transaksi paling awal.',
-    aging: 'Daftar sisa tagihan yang dikelompokkan menurut sudah berapa lama lewat jatuh tempo.'
+    aging: 'Daftar sisa tagihan yang dikelompokkan menurut sudah berapa lama lewat jatuh tempo.',
+    purchaseRequest: 'Permintaan internal untuk membeli barang. Belum mengikat supplier dan belum berdampak ke keuangan.',
+    purchaseOrder: 'Pesanan resmi ke supplier. Mengikat kita untuk membeli, tetapi belum menjadi utang sampai barang diterima.',
+    komitmenPembelian: 'Total PO yang sudah disetujui tetapi barangnya belum datang. Tidak masuk Neraca.',
+    penerimaanBarang: 'Bukti barang sudah sampai di gudang. Saat diposting, stok bertambah dan utang tercatat.',
+    returPembelian: 'Pengembalian barang ke supplier. Stok berkurang dan utang ke supplier ikut berkurang.',
+    terminBayar: 'Jumlah hari yang diberikan supplier untuk membayar sejak barang diterima. Menentukan tanggal jatuh tempo.',
+    kreditSupplier: 'Saldo lebih bayar ke supplier akibat retur setelah tagihan lunas. Bisa dipotong dari tagihan berikutnya.',
+    stokMinimum: 'Batas jumlah stok. Di bawah angka ini barang ditandai perlu dipesan ulang.',
+    kartuStok: 'Riwayat semua barang masuk dan keluar untuk satu barang beserta saldo berjalan.',
+    rataRataBergerak: 'Cara menilai stok: harga rata-rata dihitung ulang setiap ada barang masuk, dan dipakai saat barang keluar.',
+    opname: 'Menghitung stok fisik lalu mencocokkannya dengan stok di sistem.',
+    stokVsBukuBesar: 'Pemeriksaan bahwa nilai stok di kartu stok sama dengan saldo akun Persediaan.',
+    piutangSupplier: 'Nilai barang retur yang masih menjadi kewajiban supplier, misalnya refund atau barang pengganti.',
+    potongInvoice: 'Retur yang mengurangi sisa tagihan supplier. Jika tagihan sudah dibayar, nilainya menjadi Piutang Supplier.',
+    gantiBarang: 'Retur yang diselesaikan dengan barang pengganti. Utang tidak berubah; stok keluar lalu masuk kembali.',
+    penerimaanPengganti: 'Penerimaan barang pengganti dari supplier. Menambah stok dan mengurangi Piutang Supplier tanpa membuat utang baru.',
+    overrideSuper: 'Super Admin melakukan aksi yang biasanya dilarang bagi perannya. Dicatat di riwayat.'
   };
 
   global.GLOSARIUM = GLOSARIUM;

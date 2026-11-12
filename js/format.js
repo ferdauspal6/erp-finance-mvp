@@ -58,19 +58,19 @@
 
   function tanggal(isoValue) {
     var d = parseISO(isoValue);
-    if (!d) return '—';
+    if (!d) return '-';
     return d.getDate() + ' ' + BULAN[d.getMonth()] + ' ' + d.getFullYear();
   }
 
   function tanggalPanjang(isoValue) {
     var d = parseISO(isoValue);
-    if (!d) return '—';
+    if (!d) return '-';
     return d.getDate() + ' ' + BULAN_PANJANG[d.getMonth()] + ' ' + d.getFullYear();
   }
 
   function namaBulan(isoValue) {
     var d = parseISO(isoValue);
-    if (!d) return '—';
+    if (!d) return '-';
     return BULAN_PANJANG[d.getMonth()] + ' ' + d.getFullYear();
   }
 

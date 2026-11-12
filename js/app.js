@@ -3,10 +3,16 @@
 
   var Format = global.Format;
   var Ledger = global.Ledger;
+  var Overlays = global.Overlays;
   var Report = global.Report;
   var Store = global.Store;
   var Seed = global.Seed;
   var GLOSARIUM = global.GLOSARIUM;
+  var Auth = global.Auth;
+  var Purchasing = global.Purchasing;
+  var Inventory = global.Inventory;
+  var Reconcile = global.Reconcile;
+  var Returns = global.Returns;
 
   var TIPE_AKUN = ['Aset', 'Kewajiban', 'Ekuitas', 'Pendapatan', 'Beban'];
 
@@ -24,11 +30,19 @@
     ledger: icon('<path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/>'),
     report: icon('<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>'),
     bank: icon('<path d="M3 7h18v13H3z"/><path d="M3 11h18"/><path d="M16 15h2"/>'),
+    approval: icon('<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'),
+    box: icon('<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>'),
+    truck: icon('<path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>'),
+    clipboard: icon('<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/>'),
+    warehouse: icon('<path d="M3 21V9l9-6 9 6v12"/><path d="M7 21v-8h10v8"/><path d="M7 17h10"/>'),
+    returnbox: icon('<path d="M3 7h18v13H3z"/><path d="M8 7V4h8v3"/><path d="M9 12h6"/><path d="M9 16h4"/><path d="M17 12l2 2-2 2"/>'),
+    tag: icon('<path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5"/>'),
     info: icon('<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>')
   };
 
   var MENU = [
     { id: 'dashboard', label: 'Dashboard', icon: ICONS.dashboard },
+    { id: 'persetujuan', label: 'Persetujuan', icon: ICONS.approval },
     { id: 'coa', label: 'Chart of Accounts', icon: ICONS.coa },
     { id: 'jurnal', label: 'Jurnal Umum', icon: ICONS.journal },
     { id: 'cepat', label: 'Transaksi Cepat', icon: ICONS.quick },
@@ -37,6 +51,14 @@
     { id: 'bukuBesar', label: 'Buku Besar', icon: ICONS.ledger },
     { id: 'laporan', label: 'Laporan', icon: ICONS.report },
     { id: 'rekening', label: 'Rekening', icon: ICONS.bank },
+    { id: 'masterBarang', label: 'Master Barang', icon: ICONS.box },
+    { id: 'masterSupplier', label: 'Master Supplier', icon: ICONS.tag },
+    { id: 'masterPendukung', label: 'Kategori, Satuan, Gudang', icon: ICONS.clipboard },
+    { id: 'purchaseRequest', label: 'Purchase Request', icon: ICONS.clipboard },
+    { id: 'purchaseOrder', label: 'Purchase Order', icon: ICONS.truck },
+    { id: 'penerimaan', label: 'Penerimaan Barang', icon: ICONS.warehouse },
+    { id: 'returPembelian', label: 'Retur Pembelian', icon: ICONS.returnbox },
+    { id: 'stok', label: 'Stok', icon: ICONS.box },
     { id: 'informasi', label: 'Informasi', icon: ICONS.info }
   ];
 
@@ -71,10 +93,13 @@
     if (!db || db.accounts.length === 0) db = Seed.bootstrap();
     Store.save(db);
 
+    var authStore = global.Alpine && global.Alpine.store ? global.Alpine.store('auth') : null;
     var initialPage = 'dashboard';
     try {
       var hash = String(global.location.hash || '').replace('#', '');
-      if (MENU.some(function (item) { return item.id === hash; })) initialPage = hash;
+      if (MENU.some(function (item) { return item.id === hash; })) {
+        initialPage = !authStore || authStore.canView(hash) ? hash : 'denied';
+      }
     } catch (e) {
       // ignore malformed location
     }
@@ -85,6 +110,13 @@
       dataVersion: 0,
       menu: MENU,
       pendingLedgerAccount: null,
+      pendingPRId: null,
+      pendingReturnId: null,
+      get visibleMenu() {
+        var auth = global.Alpine && global.Alpine.store ? global.Alpine.store('auth') : null;
+        if (!auth) return MENU;
+        return MENU.filter(function (item) { return auth.canView(item.id); });
+      },
       dialog: {
         open: false,
         title: '',
@@ -107,16 +139,37 @@
         Store.save(this.db);
       },
 
+      touch: function () {
+        this.dataVersion = (this.dataVersion || 0) + 1;
+      },
+
       replaceData: function (next) {
         this.db = Store.normalize(next);
+        this.pendingPRId = null;
+        this.pendingReturnId = null;
         this.dataVersion = (this.dataVersion || 0) + 1;
         this.persist();
       },
 
+      ensurePageAllowed: function () {
+        var auth = global.Alpine && global.Alpine.store ? global.Alpine.store('auth') : null;
+        if (auth && this.page !== 'denied' && !auth.canView(this.page)) {
+          this.page = 'dashboard';
+          try {
+            global.history.replaceState(null, '', '#dashboard');
+          } catch (e) {
+            // ignore
+          }
+        }
+      },
+
       go: function (page) {
-        this.page = page;
+        var auth = global.Alpine && global.Alpine.store ? global.Alpine.store('auth') : null;
+        var target = page;
+        if (auth && page !== 'denied' && !auth.canView(page)) target = 'denied';
+        this.page = target;
         try {
-          global.history.replaceState(null, '', '#' + page);
+          global.history.replaceState(null, '', '#' + target);
         } catch (e) {
           // ignore
         }
@@ -141,6 +194,16 @@
         this.go('bukuBesar');
       },
 
+      openPurchaseOrder: function (prId) {
+        this.pendingPRId = prId;
+        this.go('purchaseOrder');
+      },
+
+      openReturn: function (receiptId) {
+        this.pendingReturnId = receiptId;
+        this.go('returPembelian');
+      },
+
       accountById: function (id) {
         return this.db.accounts.find(function (account) { return account.id === id; }) || null;
       },
@@ -155,17 +218,17 @@
 
       partyName: function (id) {
         var party = this.partyById(id);
-        return party ? party.nama : '—';
+        return party ? party.nama : '-';
       },
 
       accName: function (id) {
         var account = this.accountById(id);
-        return account ? account.kode + ' ' + account.nama : '—';
+        return account ? account.kode + ' ' + account.nama : '-';
       },
 
       accShort: function (id) {
         var account = this.accountById(id);
-        return account ? account.nama : '—';
+        return account ? account.nama : '-';
       },
 
       balance: function (accountId, sampai) {
@@ -252,12 +315,20 @@
       toggleAccount: function (id) {
         var account = this.accountById(id);
         if (!account) return;
+        if (account.dikunci) {
+          this.notify('Akun sistem ' + account.kode + ' tidak bisa dinonaktifkan.', 'err');
+          return;
+        }
         account.aktif = account.aktif === false;
         this.persist();
         this.notify('Akun ' + account.kode + ' ' + (account.aktif ? 'diaktifkan' : 'dinonaktifkan') + '.');
       },
 
       requestDeleteAccount: function (account) {
+        if (account.dikunci) {
+          this.notify('Akun sistem ' + account.kode + ' tidak bisa dihapus.', 'err');
+          return;
+        }
         if (Ledger.accountUsed(this.db, account.id)) {
           this.notify('Akun sudah dipakai di jurnal, tagihan, atau pembayaran. Nonaktifkan saja agar riwayat tetap utuh.', 'err');
           return;
@@ -297,6 +368,20 @@
 
       // ---------- Jurnal ----------
       saveJournal: function (draft) {
+        var auth = global.Alpine && global.Alpine.store ? global.Alpine.store('auth') : null;
+        if (auth && !auth.can('journal.manual')) {
+          return this.fail('Hanya role Finance yang dapat mencatat jurnal.');
+        }
+        var self = this;
+        var locked = (draft.lines || []).map(function (line) {
+          return line.accountId ? self.accountById(line.accountId) : null;
+        }).filter(function (account) {
+          return account && account.dikunci;
+        });
+        if (locked.length) {
+          return this.fail('Akun ' + locked[0].kode + ' ' + locked[0].nama +
+            ' dikunci. Perubahan Persediaan dan Utang Usaha hanya lewat modul purchasing.');
+        }
         var normalized = {
           tanggal: draft.tanggal,
           keterangan: draft.keterangan,
@@ -330,7 +415,7 @@
         var self = this;
         this.ask({
           title: 'Hapus jurnal?',
-          message: 'Jurnal ' + journal.nomor + ' — ' + journal.keterangan + ' akan dihapus. Tindakan ini tidak bisa dibatalkan.',
+          message: 'Jurnal ' + journal.nomor + ' - ' + journal.keterangan + ' akan dihapus. Tindakan ini tidak bisa dibatalkan.',
           confirmLabel: 'Hapus jurnal',
           onConfirm: function () {
             var result = Ledger.deleteJournal(self.db, id);
@@ -346,6 +431,10 @@
 
       // ---------- Tagihan & pembayaran ----------
       saveInvoice: function (form) {
+        var auth = global.Alpine && global.Alpine.store ? global.Alpine.store('auth') : null;
+        if (auth && !auth.can('journal.manual')) {
+          return this.fail('Hanya role Finance yang dapat membuat tagihan penjualan.');
+        }
         var jenis = form.jenis === 'utang' ? 'utang' : 'piutang';
         var party = this.partyById(form.partyId);
         var tanggal = form.tanggal || '';
@@ -355,6 +444,12 @@
         var akunLawan = this.accountById(form.akunLawanId);
         var akunHpp = this.accountById(form.akunHppId);
 
+        if (jenis === 'utang') {
+          return this.fail('Tagihan utang dibuat otomatis dari Penerimaan Barang. Buat penerimaan di menu Logistik.');
+        }
+        if (jenis === 'piutang' && hpp > 0) {
+          return this.fail('HPP penjualan dicatat lewat Pengeluaran Barang pada fase P6, bukan dari tagihan piutang.');
+        }
         if (!party) return this.fail('Pilih pihak terlebih dahulu.');
         if (party.jenis !== (jenis === 'piutang' ? 'pelanggan' : 'pemasok')) {
           return this.fail('Jenis pihak tidak cocok dengan jenis tagihan.');
@@ -401,12 +496,14 @@
           keterangan: (form.keterangan || '').trim() || (jenis === 'piutang' ? 'Penjualan kredit' : 'Pembelian kredit'),
           akunLawanId: akunLawan.id,
           akunHppId: hpp > 0 && akunHpp ? akunHpp.id : null,
-          hpp: hpp
+          hpp: hpp,
+          sumber: 'manual',
+          refId: null
         };
 
         var result = Ledger.createJournal(this.db, {
           tanggal: tanggal,
-          keterangan: (jenis === 'piutang' ? 'Penjualan kredit — ' : 'Pembelian kredit — ') + party.nama,
+          keterangan: (jenis === 'piutang' ? 'Penjualan kredit - ' : 'Pembelian kredit - ') + party.nama,
           sumber: 'tagihan',
           refId: invoice.id,
           lines: lines
@@ -420,6 +517,10 @@
       },
 
       savePayment: function (form) {
+        var auth = global.Alpine && global.Alpine.store ? global.Alpine.store('auth') : null;
+        if (auth && !auth.can('ap.pay')) {
+          return this.fail('Hanya role Finance yang dapat membayar utang.');
+        }
         var invoice = this.db.invoices.find(function (item) { return item.id === form.invoiceId; });
         if (!invoice) return this.fail('Tagihan tidak ditemukan.');
         var jumlah = Ledger.round(form.jumlah);
@@ -456,12 +557,13 @@
           invoiceId: invoice.id,
           tanggal: form.tanggal,
           jumlah: jumlah,
-          akunKasId: akunKas.id
+          akunKasId: akunKas.id,
+          jenis: 'bayar'
         };
 
         var result = Ledger.createJournal(this.db, {
           tanggal: form.tanggal,
-          keterangan: (isPiutang ? 'Penerimaan pembayaran — ' : 'Pembayaran utang — ') + this.partyName(invoice.partyId),
+          keterangan: (isPiutang ? 'Penerimaan pembayaran - ' : 'Pembayaran utang - ') + this.partyName(invoice.partyId),
           sumber: 'pembayaran',
           refId: payment.id,
           lines: lines
@@ -477,6 +579,10 @@
       requestDeleteInvoice: function (id) {
         var invoice = this.db.invoices.find(function (item) { return item.id === id; });
         if (!invoice) return;
+        if (invoice.sumber === 'penerimaan') {
+          this.notify('Tagihan dari penerimaan tidak bisa dihapus. Koreksi lewat retur pada fase P5.', 'err');
+          return;
+        }
         if (this.paymentsOf(id).length) {
           this.notify('Tagihan sudah memiliki pembayaran. Hapus pembayarannya terlebih dahulu.', 'err');
           return;
@@ -542,11 +648,28 @@
         this.requestRestartScenario();
       },
 
+      requestLoadPurchasingScenario: function () {
+        if (!global.SeedPurchasing) {
+          this.notify('Modul purchasing belum tersedia.', 'err');
+          return;
+        }
+        var self = this;
+        this.ask({
+          title: 'Muat skenario purchasing?',
+          message: 'Data saat ini diganti dengan master barang dan skenario PR, PO, serta penerimaan. Modal awal Rp 50.000.000 masuk ke Bank BCA. Ekspor JSON dulu jika perlu.',
+          confirmLabel: 'Muat skenario',
+          onConfirm: function () {
+            self.replaceData(global.SeedPurchasing.scenario());
+            self.resetView();
+          }
+        });
+      },
+
       requestClearData: function () {
         var self = this;
         this.ask({
           title: 'Clear data?',
-          message: 'Semua jurnal, tagihan, pembayaran, akun tambahan, dan pihak tambahan akan dihapus. Aplikasi kembali ke 23 akun contoh dan 2 pihak. Ekspor JSON dulu jika ingin menyimpan data lama.',
+          message: 'Semua jurnal, tagihan, pembayaran, master purchasing, PR, PO, penerimaan, retur, dan stok akan dihapus. Aplikasi kembali ke 24 akun contoh dan 2 pihak. Ekspor JSON dulu jika ingin menyimpan data lama.',
           confirmLabel: 'Clear data',
           onConfirm: function () {
             self.replaceData(Seed.bootstrap());
@@ -597,17 +720,24 @@
       },
 
       runTests: function () {
-        var result = global.SelfTest
+        var accounting = global.SelfTest
           ? global.SelfTest.run()
           : { ok: false, results: [], passed: 0, failed: 0 };
-        var details = result.results.map(function (row) {
-          return (row.ok ? 'LULUS' : 'GAGAL') + ' · ' + row.name + ': ' + row.actual + (row.ok ? '' : ' (harus ' + row.expected + ')');
+        var purchasing = global.SelfTestPurchasing
+          ? global.SelfTestPurchasing.run()
+          : { ok: true, results: [], passed: 0, failed: 0 };
+        var results = accounting.results.concat(purchasing.results);
+        var passed = accounting.passed + purchasing.passed;
+        var failed = accounting.failed + purchasing.failed;
+        var ok = accounting.ok && purchasing.ok;
+        var details = results.map(function (row) {
+          return (row.ok ? 'LULUS' : 'GAGAL') + ' | ' + row.name + ': ' + row.actual + (row.ok ? '' : ' (harus ' + row.expected + ')');
         });
         this.ask({
-          title: result.ok ? 'Uji regresi lulus' : 'Uji regresi gagal',
-          message: result.ok
-            ? result.passed + ' pemeriksaan sesuai skenario bagian 9.'
-            : result.failed + ' pemeriksaan tidak sesuai. Periksa js/ledger.js atau js/report.js.',
+          title: ok ? 'Uji regresi lulus' : 'Uji regresi gagal',
+          message: ok
+            ? passed + ' pemeriksaan lulus: akuntansi dasar dan purchasing.'
+            : failed + ' pemeriksaan tidak sesuai. Periksa modul akuntansi atau purchasing.',
           details: details,
           confirmLabel: 'Tutup',
           onConfirm: null
@@ -619,6 +749,8 @@
   function registerAlpine() {
     var Alpine = global.Alpine;
     if (!Alpine) return;
+
+    Alpine.store('auth', Auth.createStore());
 
     Alpine.store('toast', {
       items: [],
@@ -663,6 +795,7 @@
     });
 
     Alpine.store('app', createAppStore());
+    if (global.PurchasingPages) global.PurchasingPages.register(Alpine);
 
     Alpine.directive('tooltip', function (el, directive, utilities) {
       el.classList.add('tip');
@@ -718,6 +851,15 @@
         get nc() { return Report.neraca(this.db, this.per); },
         get recent() { return this.db.journals.slice().sort(journalsDesc).slice(0, 6); },
         get jumlahJurnal() { return this.db.journals.length; },
+        get role() { return this.$store.auth.role; },
+        get pendingPR() { return Purchasing.pendingPR(this.db).length; },
+        get pendingPO() { return Purchasing.pendingPO(this.db).length; },
+        get openPO() { return Purchasing.openPOs(this.db).length; },
+        get lowStock() {
+          return Inventory.ringkasan(this.db).filter(function (row) { return row.diBawahMinimum; });
+        },
+        get reconcile() { return Reconcile.ringkasan(this.db); },
+        get piutangSupplier() { return Returns.piutangSupplierBalance(this.db); },
         totalOf: function (journal) {
           return this.db.journalLines.filter(function (line) { return line.journalId === journal.id; })
             .reduce(function (sum, line) { return sum + line.debit; }, 0);
@@ -748,6 +890,18 @@
         openAdd: function () {
           this.draft = { kode: '', nama: '', tipe: 'Aset', saldoNormal: 'Debit', rekening: false, noRekening: '' };
           this.adding = true;
+          this.editing = null;
+          Overlays.mark(this, this.draft);
+        },
+        forceClose: function () {
+          this.adding = false;
+          this.editing = null;
+          this.__overlaySnapshot = null;
+        },
+        requestClose: function () {
+          var self = this;
+          var form = this.editing ? this.editForm : this.draft;
+          Overlays.requestClose(this, form, function () { self.forceClose(); });
         },
         syncNormal: function () {
           this.draft.saldoNormal = (this.draft.tipe === 'Aset' || this.draft.tipe === 'Beban') ? 'Debit' : 'Kredit';
@@ -755,7 +909,7 @@
         },
         saveAdd: function () {
           if (this.$store.app.addAccount(this.draft).ok) {
-            this.adding = false;
+            this.forceClose();
             this.draft = { kode: '', nama: '', tipe: 'Aset', saldoNormal: 'Debit', rekening: false, noRekening: '' };
           }
         },
@@ -763,10 +917,11 @@
           this.adding = false;
           this.editing = account.id;
           this.editForm = { nama: account.nama, noRekening: account.noRekening || '' };
+          Overlays.mark(this, this.editForm);
         },
-        cancelEdit: function () { this.editing = null; },
+        cancelEdit: function () { this.requestClose(); },
         saveEdit: function () {
-          if (this.$store.app.updateAccount(this.editing, this.editForm).ok) this.editing = null;
+          if (this.$store.app.updateAccount(this.editing, this.editForm).ok) this.forceClose();
         },
         toggle: function (account) { this.$store.app.toggleAccount(account.id); },
         remove: function (account) { this.$store.app.requestDeleteAccount(account); }
@@ -780,7 +935,7 @@
         form: blankJournalForm(),
         get db() { return this.$store.app.db; },
         get journals() { return this.db.journals.slice().sort(journalsDesc); },
-        get activeAccounts() { return this.db.accounts.filter(function (a) { return a.aktif !== false; }).sort(byKode); },
+        get activeAccounts() { return this.db.accounts.filter(function (a) { return a.aktif !== false && !a.dikunci; }).sort(byKode); },
         get totals() { return Ledger.totals(this.form.lines); },
         get validation() {
           return Ledger.validateJournal(this.db, {
@@ -793,10 +948,19 @@
         openForm: function () {
           this.form = blankJournalForm();
           this.showForm = true;
+          Overlays.mark(this, this.form);
         },
-        cancel: function () {
+        forceClose: function () {
           this.form = blankJournalForm();
           this.showForm = false;
+          this.__overlaySnapshot = null;
+        },
+        requestClose: function () {
+          var self = this;
+          Overlays.requestClose(this, this.form, function () { self.forceClose(); });
+        },
+        cancel: function () {
+          this.requestClose();
         },
         addLine: function () { this.form.lines.push(blankLine()); },
         removeLine: function (index) {
@@ -813,8 +977,7 @@
             })
           });
           if (result.ok) {
-            this.form = blankJournalForm();
-            this.showForm = false;
+            this.forceClose();
           }
         },
         totalOf: function (journal) {
@@ -824,6 +987,9 @@
         sourceLabel: function (journal) {
           if (journal.sumber === 'tagihan') return 'Tagihan';
           if (journal.sumber === 'pembayaran') return 'Pembayaran';
+          if (journal.sumber === 'penerimaan') return 'Penerimaan';
+          if (journal.sumber === 'retur') return 'Retur';
+          if (journal.sumber === 'pengganti') return 'Penerimaan Pengganti';
           return 'Manual';
         },
         remove: function (journal) { this.$store.app.requestDeleteJournal(journal.id); }
@@ -1002,7 +1168,8 @@
           return this.db.invoices.filter(function (invoice) { return invoice.jenis === jenis; })
             .map(function (invoice) {
               var dibayar = Report.dibayarTagihan(app.db, invoice.id);
-              var sisa = invoice.total - dibayar;
+              var retur = Report.totalReturPotong(app.db, invoice.id);
+              var sisa = Report.sisaTagihan(app.db, invoice.id);
               return {
                 id: invoice.id,
                 partyId: invoice.partyId,
@@ -1011,15 +1178,20 @@
                 jatuhTempo: invoice.jatuhTempo,
                 total: invoice.total,
                 keterangan: invoice.keterangan,
+                nomor: invoice.nomor || '',
+                sumber: invoice.sumber || 'manual',
+                refId: invoice.refId || null,
                 dibayar: dibayar,
+                retur: retur,
                 sisa: sisa,
-                status: Report.statusTagihan(invoice.total, dibayar),
-                tooltip: Report.tooltipSisaPiutang(invoice, dibayar, sisa)
+                status: Report.statusTagihan(invoice.total, dibayar, retur),
+                tooltip: Report.tooltipSisaPiutang(invoice, dibayar, sisa, retur)
               };
             })
             .sort(function (a, b) { return String(a.tanggal).localeCompare(String(b.tanggal)); });
         },
         get aging() { return Report.umurPiutang(this.db, this.perTanggal); },
+        get piutangSupplier() { return Returns.piutangSupplierBalance(this.db); },
         get rekening() {
           return this.db.accounts.filter(function (account) {
             return account.rekening && account.aktif !== false;
@@ -1068,9 +1240,24 @@
             keterangan: ''
           };
           this.adding = true;
+          this.payingId = null;
           this.historyId = null;
+          Overlays.mark(this, this.form);
         },
-        cancelAdd: function () { this.adding = false; },
+        forceClose: function () {
+          this.adding = false;
+          this.payingId = null;
+          this.__overlaySnapshot = null;
+        },
+        requestClose: function () {
+          var self = this;
+          Overlays.requestClose(this, this.form, function () { self.forceClose(); });
+        },
+        requestClosePay: function () {
+          var self = this;
+          Overlays.requestClose(this, this.payForm, function () { self.forceClose(); });
+        },
+        cancelAdd: function () { this.requestClose(); },
         save: function () {
           var result = this.$store.app.saveInvoice({
             jenis: jenis,
@@ -1083,17 +1270,19 @@
             hpp: this.form.hpp,
             keterangan: this.form.keterangan
           });
-          if (result.ok) this.adding = false;
+          if (result.ok) this.forceClose();
         },
         openPay: function (invoice) {
+          this.adding = false;
           this.payingId = invoice.id;
           this.payForm = {
             tanggal: Format.todayISO(),
             jumlah: invoice.sisa,
             akunKasId: (this.rekening[0] || {}).id || ''
           };
+          Overlays.mark(this, this.payForm);
         },
-        cancelPay: function () { this.payingId = null; },
+        cancelPay: function () { this.requestClosePay(); },
         savePay: function () {
           var result = this.$store.app.savePayment({
             invoiceId: this.payingId,
@@ -1101,7 +1290,7 @@
             jumlah: this.payForm.jumlah,
             akunKasId: this.payForm.akunKasId
           });
-          if (result.ok) this.payingId = null;
+          if (result.ok) this.forceClose();
         },
         toggleHistory: function (invoice) {
           this.historyId = this.historyId === invoice.id ? null : invoice.id;
@@ -1120,8 +1309,7 @@
     Alpine.data('quickPage', function () {
       var TEMPLATES = [
         { id: 'setorModal', nama: 'Setor modal', desc: 'Pemilik menambah modal ke rekening usaha.', lawanKode: '3-1100' },
-        { id: 'jualTunai', nama: 'Jual tunai', desc: 'Menjual barang dan menerima uang tunai atau transfer.', lawanKode: '4-1100' },
-        { id: 'beliTunai', nama: 'Beli tunai', desc: 'Membeli persediaan atau aset dan membayar tunai.', lawanKode: '1-1300' },
+        { id: 'jualTunai', nama: 'Jual tunai', desc: 'Mencatat pendapatan tunai. HPP dicatat lewat Pengeluaran Barang.', lawanKode: '4-1100' },
         { id: 'bayarBeban', nama: 'Bayar beban', desc: 'Membayar beban operasional seperti sewa atau listrik.', lawanKode: '5-2200' },
         { id: 'prive', nama: 'Prive', desc: 'Pemilik mengambil uang usaha untuk keperluan pribadi.', lawanKode: '3-1200' },
         { id: 'transfer', nama: 'Transfer antar rekening', desc: 'Memindahkan uang antara Kas dan Bank.', lawanKode: null }
@@ -1163,7 +1351,7 @@
           var t = this.template;
           if (t === 'bayarBeban') {
             return this.db.accounts.filter(function (account) {
-              return account.tipe === 'Beban' && account.aktif !== false;
+              return account.tipe === 'Beban' && account.aktif !== false && !account.hpp;
             }).sort(byKode);
           }
           if (t === 'beliTunai') {
@@ -1215,17 +1403,10 @@
             ];
           }
           if (t === 'jualTunai') {
-            var lines = [
+            return [
               { accountId: kas, debit: jumlah, kredit: 0 },
               { accountId: lawan, debit: 0, kredit: jumlah }
             ];
-            var hpp = Ledger.round(this.form.hpp);
-            var persediaan = app.accountByKode('1-1300');
-            if (hpp > 0 && this.form.akunHppId && persediaan) {
-              lines.push({ accountId: this.form.akunHppId, debit: hpp, kredit: 0 });
-              lines.push({ accountId: persediaan.id, debit: 0, kredit: hpp });
-            }
-            return lines;
           }
           if (t === 'beliTunai' || t === 'bayarBeban') {
             return [
@@ -1274,6 +1455,7 @@
     Alpine.data('bankPage', function () {
       return {
         adding: false,
+        transferOpen: false,
         addForm: { nama: '', noRekening: '' },
         transferForm: { tanggal: Format.todayISO(), jumlah: '', dariId: '', tujuanId: '', keterangan: '' },
         get db() { return this.$store.app.db; },
@@ -1288,19 +1470,47 @@
         openAdd: function () {
           this.addForm = { nama: '', noRekening: '' };
           this.adding = true;
+          this.transferOpen = false;
+          Overlays.mark(this, this.addForm);
         },
-        cancelAdd: function () { this.adding = false; },
+        requestClose: function () {
+          var self = this;
+          Overlays.requestClose(this, this.addForm, function () { self.forceClose(); });
+        },
+        cancelAdd: function () { this.requestClose(); },
+        forceClose: function () {
+          this.adding = false;
+          this.transferOpen = false;
+          this.__overlaySnapshot = null;
+        },
         saveAdd: function () {
           if (this.$store.app.addRekening(this.addForm).ok) {
-            this.adding = false;
+            this.forceClose();
             this.addForm = { nama: '', noRekening: '' };
           }
+        },
+        openTransfer: function () {
+          this.adding = false;
+          this.transferOpen = true;
+          this.transferForm = {
+            tanggal: Format.todayISO(),
+            jumlah: '',
+            dariId: (this.rekening[0] || {}).id || '',
+            tujuanId: (this.rekening[1] || {}).id || '',
+            keterangan: ''
+          };
+          Overlays.mark(this, this.transferForm);
+        },
+        requestCloseTransfer: function () {
+          var self = this;
+          Overlays.requestClose(this, this.transferForm, function () { self.forceClose(); });
         },
         transfer: function () {
           var result = this.$store.app.transfer(this.transferForm);
           if (result.ok) {
             this.transferForm.jumlah = '';
             this.transferForm.keterangan = '';
+            this.forceClose();
           }
         }
       };
@@ -1312,7 +1522,11 @@
     global.addEventListener('DOMContentLoaded', function () {
       if (global.location && /[?&]test=1/.test(global.location.search) && global.SelfTest) {
         var result = global.SelfTest.run();
-        if (global.console) global.console.log('Self-test', result);
+        var purchasing = global.SelfTestPurchasing ? global.SelfTestPurchasing.run() : null;
+        if (global.console) {
+          global.console.log('Self-test akuntansi', result);
+          if (purchasing) global.console.log('Self-test purchasing', purchasing);
+        }
       }
     });
   }

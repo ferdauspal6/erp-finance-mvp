@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Akuntansi MVP — Belajar dari jurnal</title>
+  <title>Akuntansi & Purchasing MVP — Belajar dari jurnal</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2309090b'/%3E%3Ctext x='16' y='22' font-family='sans-serif' font-size='18' font-weight='600' fill='white' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,6 +31,26 @@
       body { background: #fff !important; }
       main { width: 100% !important; }
       .card { break-inside: avoid; border-color: #d4d4d8 !important; }
+    }
+  </style>
+
+  <style>
+    .overlay-backdrop { position: absolute; inset: 0; background: rgba(9, 9, 11, 0.4); }
+    .overlay-panel { position: relative; display: flex; flex-direction: column; width: 100%; max-height: 92vh; overflow: hidden; border: 1px solid #e4e4e7; border-radius: 0.375rem; background: #fff; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+    .modal-panel { max-width: 32rem; }
+    .modal-panel-md { max-width: 42rem; }
+    .drawer-panel { max-width: 1100px; height: 100dvh; max-height: 100dvh; border-radius: 0; border-top: 0; border-bottom: 0; border-right: 0; }
+    .drawer-panel .overlay-body table { min-width: 680px; }
+    .overlay-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #e4e4e7; padding: 0.75rem 1rem; flex-shrink: 0; }
+    .overlay-body { flex: 1 1 auto; overflow-y: auto; padding: 1rem; }
+    .overlay-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem; border-top: 1px solid #e4e4e7; padding: 0.75rem 1rem; flex-shrink: 0; }
+    @media (min-width: 640px) {
+      .overlay-header { padding-left: 1.25rem; padding-right: 1.25rem; }
+      .overlay-body { padding: 1.25rem; }
+      .overlay-footer { padding-left: 1.25rem; padding-right: 1.25rem; }
+    }
+    @media (max-width: 639px) {
+      .overlay-panel { height: 100dvh; max-height: 100dvh; border-radius: 0; border-left: 0; border-right: 0; }
     }
   </style>
   <style type="text/tailwindcss">
@@ -66,13 +86,22 @@
   <aside class="no-print sticky top-0 hidden h-screen w-16 shrink-0 flex-col border-r border-zinc-200 bg-white sm:flex lg:w-60">
     <div class="flex h-16 items-center gap-2 border-b border-zinc-200 px-3 lg:px-5">
       <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-zinc-950 text-sm font-semibold text-white">A</div>
-      <div class="hidden lg:block">
-        <p class="text-sm font-semibold leading-tight">Akuntansi MVP</p>
-        <p class="text-[11px] leading-tight text-zinc-500">Belajar dari jurnal</p>
+      <div class="hidden min-w-0 lg:block">
+        <p class="truncate text-sm font-semibold leading-tight">Akuntansi MVP</p>
+        <p class="truncate text-[11px] leading-tight text-zinc-500">Finance + Logistik</p>
       </div>
     </div>
+    <div class="border-b border-zinc-200 p-2">
+      <label class="label hidden px-1 lg:block">Role aktif</label>
+      <select class="input btn-sm" x-model="$store.auth.role"
+        @change="$store.auth.setRole($event.target.value); $store.app.ensurePageAllowed()">
+        <template x-for="role in $store.auth.roles" :key="role.id">
+          <option :value="role.id" x-text="role.label"></option>
+        </template>
+      </select>
+    </div>
     <nav class="flex-1 space-y-0.5 overflow-y-auto p-2">
-      <template x-for="item in $store.app.menu" :key="item.id">
+      <template x-for="item in $store.app.visibleMenu" :key="item.id">
         <button type="button" @click="$store.app.go(item.id)"
           class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors"
           :class="$store.app.page === item.id ? 'bg-zinc-950 text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950'">
@@ -82,8 +111,11 @@
       </template>
     </nav>
     <div class="space-y-1 border-t border-zinc-200 p-2">
-      <button type="button" class="btn btn-outline w-full justify-start btn-sm" @click="$store.app.requestLoadScenario()">
-        <span class="hidden lg:inline">Muat skenario</span><span class="lg:hidden">S</span>
+      <button type="button" class="btn btn-outline w-full justify-start btn-sm" x-show="$store.auth.role === 'finance'" @click="$store.app.requestLoadScenario()">
+        <span class="hidden lg:inline">Muat skenario akuntansi</span><span class="lg:hidden">S</span>
+      </button>
+      <button type="button" class="btn btn-outline w-full justify-start btn-sm" x-show="$store.auth.role === 'logistik'" @click="$store.app.requestLoadPurchasingScenario()">
+        <span class="hidden lg:inline">Muat skenario purchasing</span><span class="lg:hidden">S</span>
       </button>
       <button type="button" class="btn btn-danger w-full justify-start btn-sm" @click="$store.app.requestClearData()">
         <span class="hidden lg:inline">Clear data</span><span class="lg:hidden">C</span>
@@ -96,9 +128,15 @@
   </aside>
 
   <main class="min-w-0 flex-1">
-    <div class="no-print flex items-center gap-2 border-b border-zinc-200 bg-white px-4 py-2 sm:hidden">
+    <div class="no-print flex flex-col gap-2 border-b border-zinc-200 bg-white px-4 py-2 sm:hidden">
+      <select class="input" x-model="$store.auth.role"
+        @change="$store.auth.setRole($event.target.value); $store.app.ensurePageAllowed()">
+        <template x-for="role in $store.auth.roles" :key="role.id">
+          <option :value="role.id" x-text="role.label"></option>
+        </template>
+      </select>
       <select class="input" x-model="$store.app.page" @change="$store.app.go($event.target.value)">
-        <template x-for="item in $store.app.menu" :key="item.id">
+        <template x-for="item in $store.app.visibleMenu" :key="item.id">
           <option :value="item.id" x-text="item.label"></option>
         </template>
       </select>
@@ -109,16 +147,19 @@
       <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <div>
           <h1 class="page-title">Dashboard</h1>
-          <p class="muted mt-1">Gambaran besar dari jurnal yang Anda catat. Tanggal acuan: <span class="font-medium text-zinc-950" x-text="Format.tanggalPanjang(per)"></span>.</p>
+          <p class="muted mt-1" x-text="role === 'finance' ? 'Gambaran besar dari jurnal yang Anda catat.' : 'Ringkasan purchasing, komitmen, dan stok.'"></p>
+          <p class="muted mt-1">Tanggal acuan: <span class="font-medium text-zinc-950" x-text="Format.tanggalPanjang(per)"></span>.</p>
         </div>
         <div class="flex flex-wrap gap-2">
-          <button class="btn btn-outline" @click="$store.app.requestLoadScenario()">Muat skenario</button>
-          <button class="btn btn-primary" @click="$store.app.go('jurnal')">Catat jurnal</button>
+          <button class="btn btn-outline" x-show="role === 'finance'" @click="$store.app.requestLoadScenario()">Muat skenario akuntansi</button>
+          <button class="btn btn-primary" x-show="role === 'finance'" @click="$store.app.go('jurnal')">Catat jurnal</button>
+          <button class="btn btn-outline" x-show="role === 'logistik'" @click="$store.app.requestLoadPurchasingScenario()">Muat skenario purchasing</button>
+          <button class="btn btn-primary" x-show="role === 'logistik'" @click="$store.app.go('purchaseRequest')">Buat PR</button>
         </div>
       </header>
 
       <div class="space-y-6 px-4 py-6 sm:px-8">
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" x-show="role === 'finance'">
           <div class="card card-pad">
             <p class="eyebrow" x-tooltip="'kas'">Kas &amp; bank</p>
             <p class="mt-2 text-2xl font-semibold tabular-nums" x-text="Format.rupiah(kas)"></p>
@@ -141,7 +182,30 @@
           </div>
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-3">
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" x-show="role === 'logistik'">
+          <div class="card card-pad">
+            <p class="eyebrow">PR menunggu</p>
+            <p class="mt-2 text-2xl font-semibold tabular-nums" x-text="pendingPR"></p>
+            <p class="muted mt-1">Menunggu persetujuan Finance</p>
+          </div>
+          <div class="card card-pad">
+            <p class="eyebrow">PO menunggu</p>
+            <p class="mt-2 text-2xl font-semibold tabular-nums" x-text="pendingPO"></p>
+            <p class="muted mt-1">Menunggu persetujuan Finance</p>
+          </div>
+          <div class="card card-pad">
+            <p class="eyebrow">PO terbuka</p>
+            <p class="mt-2 text-2xl font-semibold tabular-nums" x-text="openPO"></p>
+            <p class="muted mt-1">Disetujui, dikirim, atau diterima sebagian</p>
+          </div>
+          <div class="card card-pad">
+            <p class="eyebrow">Stok di bawah minimum</p>
+            <p class="mt-2 text-2xl font-semibold tabular-nums" x-text="lowStock.length"></p>
+            <p class="muted mt-1">Barang yang perlu dipesan ulang</p>
+          </div>
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-3" x-show="role === 'finance'">
           <div class="card card-pad lg:col-span-2">
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -191,12 +255,44 @@
             <input type="file" accept="application/json,.json" class="hidden" x-ref="file" @change="onFile($event)">
             <button class="btn btn-outline w-full" @click="$store.app.runTests()">Jalankan uji regresi</button>
             <button class="btn btn-danger w-full" @click="$store.app.requestClearData()">Clear data</button>
-            <p class="text-[11px] leading-snug text-zinc-400">Clear data mengembalikan akun ke 23 akun bawaan.</p>
+            <div class="rounded-md border border-zinc-200 p-3 text-xs text-zinc-600">
+              <p class="font-medium text-zinc-950">Kontrol persediaan</p>
+              <p class="mt-1">Selisih stok: <span class="font-medium" x-text="Format.rupiah(reconcile.stok.selisih)"></span></p>
+              <p>Selisih utang: <span class="font-medium" x-text="Format.rupiah(reconcile.utang.selisih)"></span></p>
+              <p>Piutang Supplier: <span class="font-medium" x-text="Format.rupiah(piutangSupplier)"></span></p>
+              <p class="mt-1 text-[11px] text-zinc-400" x-show="reconcile.legacy">Skenario legacy tidak memakai subledger stok.</p>
+            </div>
+            <p class="text-[11px] leading-snug text-zinc-400">Clear data mengembalikan akun ke 24 akun bawaan.</p>
             <p class="text-[11px] leading-snug text-zinc-400" x-text="jumlahJurnal + ' jurnal tersimpan'"></p>
           </div>
         </div>
 
-        <div class="card">
+        <div class="grid gap-4 lg:grid-cols-2" x-show="role === 'logistik'">
+          <div class="card card-pad">
+            <p class="section-title">Stok vs Buku Besar</p>
+            <p class="muted mt-1">Pemeriksaan cepat untuk Logistik.</p>
+            <div class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+              <div><p class="text-zinc-500">Nilai stok</p><p class="font-medium" x-text="Format.rupiah(reconcile.stok.nilaiStok)"></p></div>
+              <div><p class="text-zinc-500">Saldo Buku Besar</p><p class="font-medium" x-text="Format.rupiah(reconcile.stok.saldoBuku)"></p></div>
+              <div><p class="text-zinc-500">Selisih stok</p><p class="font-medium" x-text="Format.rupiah(reconcile.stok.selisih)"></p></div>
+              <div><p class="text-zinc-500">Selisih utang</p><p class="font-medium" x-text="Format.rupiah(reconcile.utang.selisih)"></p></div>
+            </div>
+            <button class="btn btn-outline btn-sm mt-3" @click="$store.app.go('stok')">Buka halaman Stok</button>
+          </div>
+          <div class="card card-pad">
+            <p class="section-title">Alat belajar Logistik</p>
+            <p class="muted mt-1">Muat skenario, cadangkan data, atau jalankan uji regresi.</p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button class="btn btn-outline" @click="$store.app.requestLoadPurchasingScenario()">Muat skenario purchasing</button>
+              <button class="btn btn-outline" @click="$store.app.runTests()">Uji regresi</button>
+              <button class="btn btn-outline" @click="$store.app.exportData()">Ekspor JSON</button>
+              <button class="btn btn-danger" @click="$store.app.requestClearData()">Clear data</button>
+            </div>
+            <p class="mt-2 text-[11px] leading-snug text-zinc-400" x-text="jumlahJurnal + ' jurnal tersimpan'"></p>
+          </div>
+        </div>
+
+        <div class="card" x-show="role === 'finance'">
           <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
             <p class="section-title">Jurnal terakhir</p>
             <button class="btn btn-ghost btn-sm" @click="$store.app.go('jurnal')">Lihat semua</button>
@@ -242,77 +338,53 @@
       <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <div>
           <h1 class="page-title">Chart of Accounts</h1>
-          <p class="muted mt-1">23 akun awal. Kode mengikuti pola: 1 aset, 2 kewajiban, 3 ekuitas, 4 pendapatan, 5 beban.</p>
+          <p class="muted mt-1">24 akun awal. Kode mengikuti pola: 1 aset, 2 kewajiban, 3 ekuitas, 4 pendapatan, 5 beban.</p>
         </div>
         <button class="btn btn-primary" @click="openAdd()">Tambah akun</button>
       </header>
 
       <div class="space-y-5 px-4 py-6 sm:px-8">
-        <div class="card card-pad" x-show="adding" x-cloak>
-          <div class="flex items-start justify-between">
-            <p class="section-title">Tambah akun</p>
-            <button class="btn btn-ghost btn-sm" @click="adding = false">Tutup</button>
-          </div>
-          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <label class="label">Kode akun</label>
-              <input class="input" placeholder="1-1500" x-model="draft.kode">
-            </div>
-            <div class="sm:col-span-2">
-              <label class="label">Nama akun</label>
-              <input class="input" placeholder="Nama akun baru" x-model="draft.nama">
-            </div>
-            <div>
-              <label class="label" x-tooltip="'tipeAkun'">Tipe akun</label>
-              <select class="input" x-model="draft.tipe" @change="syncNormal()">
-                <template x-for="tipe in types" :key="tipe">
-                  <option :value="tipe" x-text="tipe"></option>
-                </template>
-              </select>
-            </div>
-            <div>
-              <label class="label" x-tooltip="'saldoNormal'">Saldo normal</label>
-              <select class="input" x-model="draft.saldoNormal">
-                <option value="Debit">Debit</option>
-                <option value="Kredit">Kredit</option>
-              </select>
-            </div>
-            <div class="flex items-end gap-2 pb-1.5">
-              <label class="flex items-center gap-2 text-sm text-zinc-700">
-                <input type="checkbox" class="h-4 w-4 rounded border-zinc-300" x-model="draft.rekening" :disabled="draft.tipe !== 'Aset'">
-                Tandai sebagai rekening
-              </label>
-            </div>
-            <div>
-              <label class="label">No. rekening (opsional)</label>
-              <input class="input" placeholder="123-456-7890" x-model="draft.noRekening">
-            </div>
-            <div class="flex items-end">
-              <button class="btn btn-primary w-full" @click="saveAdd()">Simpan akun</button>
+        <template x-teleport="body">
+          <div x-show="adding" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-0 sm:p-4"
+            @keydown.escape.window="adding && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel modal-panel-md" x-effect="Overlays.sync(adding, $el)" aria-labelledby="coa-add-title">
+              <div class="overlay-header"><p id="coa-add-title" class="section-title">Tambah akun</p><button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button></div>
+              <div class="overlay-body">
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <div><label class="label">Kode akun</label><input class="input" placeholder="1-1500" x-model="draft.kode"></div>
+                  <div><label class="label">Nama akun</label><input class="input" placeholder="Nama akun baru" x-model="draft.nama"></div>
+                  <div><label class="label" x-tooltip="'tipeAkun'">Tipe akun</label>
+                    <select class="input" x-model="draft.tipe" @change="syncNormal()"><template x-for="tipe in types" :key="tipe"><option :value="tipe" x-text="tipe"></option></template></select>
+                  </div>
+                  <div><label class="label" x-tooltip="'saldoNormal'">Saldo normal</label>
+                    <select class="input" x-model="draft.saldoNormal"><option value="Debit">Debit</option><option value="Kredit">Kredit</option></select>
+                  </div>
+                  <div><label class="label">No. rekening (opsional)</label><input class="input" placeholder="123-456-7890" x-model="draft.noRekening"></div>
+                  <label class="flex items-end gap-2 pb-1.5 text-sm text-zinc-700"><input type="checkbox" class="h-4 w-4 rounded border-zinc-300" x-model="draft.rekening" :disabled="draft.tipe !== 'Aset'"> Tandai sebagai rekening</label>
+                </div>
+              </div>
+              <div class="overlay-footer"><button class="btn btn-outline" @click="requestClose()">Batal</button><button class="btn btn-primary" @click="saveAdd()">Simpan akun</button></div>
             </div>
           </div>
-        </div>
+        </template>
 
-        <div class="card card-pad" x-show="editing" x-cloak>
-          <div class="flex items-start justify-between">
-            <p class="section-title">Ubah akun</p>
-            <button class="btn btn-ghost btn-sm" @click="cancelEdit()">Tutup</button>
-          </div>
-          <div class="mt-4 grid gap-3 sm:grid-cols-3">
-            <div class="sm:col-span-2">
-              <label class="label">Nama akun</label>
-              <input class="input" x-model="editForm.nama">
+        <template x-teleport="body">
+          <div x-show="editing" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-0 sm:p-4"
+            @keydown.escape.window="editing && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel modal-panel" x-effect="Overlays.sync(!!editing, $el)" aria-labelledby="coa-edit-title">
+              <div class="overlay-header"><p id="coa-edit-title" class="section-title">Ubah akun</p><button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button></div>
+              <div class="overlay-body">
+                <div class="grid gap-3">
+                  <div><label class="label">Nama akun</label><input class="input" x-model="editForm.nama"></div>
+                  <div><label class="label">No. rekening</label><input class="input" x-model="editForm.noRekening"></div>
+                </div>
+              </div>
+              <div class="overlay-footer"><button class="btn btn-outline" @click="requestClose()">Batal</button><button class="btn btn-primary" @click="saveEdit()">Simpan perubahan</button></div>
             </div>
-            <div>
-              <label class="label">No. rekening</label>
-              <input class="input" x-model="editForm.noRekening">
-            </div>
           </div>
-          <div class="mt-3 flex gap-2">
-            <button class="btn btn-primary" @click="saveEdit()">Simpan perubahan</button>
-            <button class="btn btn-outline" @click="cancelEdit()">Batal</button>
-          </div>
-        </div>
+        </template>
 
         <template x-for="tipe in types" :key="tipe">
           <div class="card">
@@ -339,6 +411,7 @@
                       <td class="td">
                         <span x-text="account.nama"></span>
                         <span class="ml-1.5 rounded-full border border-zinc-200 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-zinc-400" x-show="account.rekening" x-tooltip="'rekening'">rekening</span>
+                        <span class="ml-1.5 rounded-full border border-zinc-950 bg-zinc-950 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-white" x-show="account.dikunci">sistem</span>
                         <p class="text-[11px] text-zinc-400" x-show="account.noRekening" x-text="account.noRekening"></p>
                       </td>
                       <td class="td"><span class="badge badge-outline" x-text="account.saldoNormal" x-tooltip="'saldoNormal'"></span></td>
@@ -351,8 +424,8 @@
                       <td class="td">
                         <div class="flex justify-end gap-1">
                           <button class="btn btn-ghost btn-sm" @click="startEdit(account)">Ubah</button>
-                          <button class="btn btn-ghost btn-sm" @click="toggle(account)" x-text="account.aktif === false ? 'Aktifkan' : 'Nonaktifkan'"></button>
-                          <button class="btn btn-ghost btn-sm" @click="remove(account)">Hapus</button>
+                          <button class="btn btn-ghost btn-sm" @click="toggle(account)" :disabled="account.dikunci" x-text="account.aktif === false ? 'Aktifkan' : 'Nonaktifkan'"></button>
+                          <button class="btn btn-ghost btn-sm" @click="remove(account)" :disabled="account.dikunci">Hapus</button>
                         </div>
                       </td>
                     </tr>
@@ -386,85 +459,57 @@
       </header>
 
       <div class="space-y-5 px-4 py-6 sm:px-8">
-        <div class="card" x-show="showForm" x-cloak>
-          <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
-            <p class="section-title">Jurnal manual</p>
-            <button class="btn btn-ghost btn-sm" @click="cancel()">Tutup</button>
-          </div>
-          <div class="card-pad space-y-4">
-            <div class="grid gap-3 sm:grid-cols-3">
-              <div>
-                <label class="label">Tanggal</label>
-                <input type="date" class="input" x-model="form.tanggal">
+        <template x-teleport="body">
+          <div x-show="showForm" x-cloak class="fixed inset-0 z-40 flex items-stretch justify-end p-0"
+            @keydown.escape.window="showForm && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel drawer-panel" x-effect="Overlays.sync(showForm, $el)" aria-labelledby="jurnal-modal-title">
+              <div class="overlay-header">
+                <div><p id="jurnal-modal-title" class="section-title">Jurnal manual</p><p class="muted mt-1">Debit dan kredit harus seimbang.</p></div>
+                <button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button>
               </div>
-              <div class="sm:col-span-2">
-                <label class="label">Keterangan</label>
-                <input class="input" placeholder="Misalnya: Bayar listrik November" x-model="form.keterangan">
-              </div>
-            </div>
-
-            <div class="overflow-x-auto rounded-md border border-zinc-200">
-              <table class="w-full">
-                <thead class="bg-zinc-50">
-                  <tr>
-                    <th class="th w-1/2">Akun</th>
-                    <th class="th num" x-tooltip="'debit'">Debit</th>
-                    <th class="th num" x-tooltip="'kredit'">Kredit</th>
-                    <th class="th"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <template x-for="(line, index) in form.lines" :key="index">
-                    <tr>
-                      <td class="td">
-                        <select class="input" x-model="line.accountId">
-                          <option value="">Pilih akun…</option>
-                          <template x-for="account in activeAccounts" :key="account.id">
-                            <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
-                          </template>
-                        </select>
-                      </td>
-                      <td class="td">
-                        <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="line.debit" @input="onDebit(index)">
-                      </td>
-                      <td class="td">
-                        <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="line.kredit" @input="onKredit(index)">
-                      </td>
-                      <td class="td text-right">
-                        <button class="btn btn-ghost btn-sm" @click="removeLine(index)" :disabled="form.lines.length <= 2">Hapus</button>
-                      </td>
-                    </tr>
-                  </template>
-                </tbody>
-              </table>
-            </div>
-
-            <div class="flex flex-col gap-3 border-t border-zinc-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
-              <button class="btn btn-outline btn-sm" @click="addLine()">Tambah baris</button>
-              <div class="flex flex-wrap items-center gap-4 text-sm">
-                <span>Debit <span class="font-medium tabular-nums" x-text="Format.num(totals.totalDebit)"></span></span>
-                <span>Kredit <span class="font-medium tabular-nums" x-text="Format.num(totals.totalKredit)"></span></span>
-                <span x-show="totals.selisih !== 0" class="badge badge-outline" x-tooltip="'selisih'">
-                  Selisih <span class="ml-1 tabular-nums" x-text="Format.num(totals.selisih)"></span>
-                </span>
-                <span x-show="totals.selisih === 0 && totals.totalDebit > 0" class="badge badge-solid">Seimbang</span>
-              </div>
-            </div>
-
-            <template x-if="validation.errors.length">
-              <ul class="space-y-1 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
-                <template x-for="error in validation.errors" :key="error">
-                  <li x-text="'• ' + error"></li>
+              <div class="overlay-body space-y-4">
+                <div class="grid gap-3 sm:grid-cols-3">
+                  <div><label class="label">Tanggal</label><input type="date" class="input" x-model="form.tanggal"></div>
+                  <div class="sm:col-span-2"><label class="label">Keterangan</label><input class="input" placeholder="Misalnya: Bayar listrik November" x-model="form.keterangan"></div>
+                </div>
+                <div class="overflow-x-auto rounded-md border border-zinc-200">
+                  <table class="w-full">
+                    <thead class="bg-zinc-50"><tr><th class="th w-1/2">Akun</th><th class="th num" x-tooltip="'debit'">Debit</th><th class="th num" x-tooltip="'kredit'">Kredit</th><th class="th"></th></tr></thead>
+                    <tbody>
+                      <template x-for="(line, index) in form.lines" :key="index">
+                        <tr>
+                          <td class="td"><select class="input" x-model="line.accountId"><option value="">Pilih akun…</option><template x-for="account in activeAccounts" :key="account.id"><option :value="account.id" x-text="account.kode + ' - ' + account.nama"></option></template></select></td>
+                          <td class="td"><input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="line.debit" @input="onDebit(index)"></td>
+                          <td class="td"><input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="line.kredit" @input="onKredit(index)"></td>
+                          <td class="td text-right"><button class="btn btn-ghost btn-sm" @click="removeLine(index)" :disabled="form.lines.length <= 2">Hapus</button></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="flex flex-col gap-3 border-t border-zinc-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                  <button class="btn btn-outline btn-sm" @click="addLine()">Tambah baris</button>
+                  <div class="flex flex-wrap items-center gap-4 text-sm">
+                    <span>Debit <span class="font-medium tabular-nums" x-text="Format.num(totals.totalDebit)"></span></span>
+                    <span>Kredit <span class="font-medium tabular-nums" x-text="Format.num(totals.totalKredit)"></span></span>
+                    <span x-show="totals.selisih !== 0" class="badge badge-outline" x-tooltip="'selisih'">Selisih <span class="ml-1 tabular-nums" x-text="Format.num(totals.selisih)"></span></span>
+                    <span x-show="totals.selisih === 0 && totals.totalDebit > 0" class="badge badge-solid">Seimbang</span>
+                  </div>
+                </div>
+                <template x-if="validation.errors.length">
+                  <ul class="space-y-1 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
+                    <template x-for="error in validation.errors" :key="error"><li x-text="'• ' + error"></li></template>
+                  </ul>
                 </template>
-              </ul>
-            </template>
-
-            <div class="flex gap-2">
-              <button class="btn btn-primary" @click="save()" :disabled="!validation.ok">Simpan jurnal</button>
-              <button class="btn btn-outline" @click="cancel()">Batal</button>
+              </div>
+              <div class="overlay-footer">
+                <button class="btn btn-outline" @click="requestClose()">Batal</button>
+                <button class="btn btn-primary" @click="save()" :disabled="!validation.ok">Simpan jurnal</button>
+              </div>
             </div>
           </div>
-        </div>
+        </template>
 
         <div class="card">
           <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
@@ -622,22 +667,8 @@
                 </select>
               </div>
 
-              <div class="sm:col-span-2" x-show="template === 'jualTunai'">
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <label class="label" x-tooltip="'hpp'">HPP (opsional)</label>
-                    <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="form.hpp">
-                  </div>
-                  <div>
-                    <label class="label">Akun HPP</label>
-                    <select class="input" x-model="form.akunHppId">
-                      <template x-for="account in hppOptions" :key="account.id">
-                        <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
-                      </template>
-                    </select>
-                  </div>
-                </div>
-                <p class="mt-1 text-[11px] text-zinc-400">Jika HPP diisi, sistem menambah Dr HPP dan Cr Persediaan Barang.</p>
+              <div class="sm:col-span-2 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-600" x-show="template === 'jualTunai'">
+                HPP dan pengurangan Persediaan dicatat melalui <strong class="text-zinc-950">Pengeluaran Barang</strong> pada fase P6. Jurnal ini hanya mencatat pendapatan dan kas.
               </div>
 
               <div class="sm:col-span-2">
@@ -738,63 +769,27 @@
           <input type="date" class="input sm:w-48" x-model="perTanggal">
         </div>
 
-        <div class="card card-pad" x-show="adding" x-cloak>
-          <div class="flex items-start justify-between">
-            <p class="section-title">Tagihan piutang baru</p>
-            <button class="btn btn-ghost btn-sm" @click="cancelAdd()">Tutup</button>
-          </div>
-          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <label class="label">Pelanggan</label>
-              <select class="input" x-model="form.partyId">
-                <template x-for="party in parties" :key="party.id">
-                  <option :value="party.id" x-text="party.nama"></option>
-                </template>
-              </select>
-            </div>
-            <div>
-              <label class="label">Tanggal</label>
-              <input type="date" class="input" x-model="form.tanggal">
-            </div>
-            <div>
-              <label class="label" x-tooltip="'jatuhTempo'">Jatuh tempo</label>
-              <input type="date" class="input" x-model="form.jatuhTempo">
-            </div>
-            <div>
-              <label class="label">Jumlah tagihan</label>
-              <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="form.total">
-            </div>
-            <div>
-              <label class="label">Akun pendapatan</label>
-              <select class="input" x-model="form.akunLawanId">
-                <template x-for="account in revenueAccounts" :key="account.id">
-                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
-                </template>
-              </select>
-            </div>
-            <div>
-              <label class="label" x-tooltip="'hpp'">HPP (opsional)</label>
-              <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="form.hpp">
-            </div>
-            <div>
-              <label class="label">Akun HPP</label>
-              <select class="input" x-model="form.akunHppId">
-                <template x-for="account in expenseAccounts" :key="account.id">
-                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
-                </template>
-              </select>
-            </div>
-            <div class="sm:col-span-2">
-              <label class="label">Keterangan</label>
-              <input class="input" placeholder="Misalnya: Penjualan kredit 10 unit" x-model="form.keterangan">
+        <template x-teleport="body">
+          <div x-show="adding" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-0 sm:p-4"
+            @keydown.escape.window="adding && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel modal-panel-md" x-effect="Overlays.sync(adding, $el)" aria-labelledby="piutang-modal-title">
+              <div class="overlay-header"><p id="piutang-modal-title" class="section-title">Tagihan piutang baru</p><button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button></div>
+              <div class="overlay-body">
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <div><label class="label">Pelanggan</label><select class="input" x-model="form.partyId"><template x-for="party in parties" :key="party.id"><option :value="party.id" x-text="party.nama"></option></template></select></div>
+                  <div><label class="label">Tanggal</label><input type="date" class="input" x-model="form.tanggal"></div>
+                  <div><label class="label" x-tooltip="'jatuhTempo'">Jatuh tempo</label><input type="date" class="input" x-model="form.jatuhTempo"></div>
+                  <div><label class="label">Jumlah tagihan</label><input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="form.total"></div>
+                  <div><label class="label">Akun pendapatan</label><select class="input" x-model="form.akunLawanId"><template x-for="account in revenueAccounts" :key="account.id"><option :value="account.id" x-text="account.kode + ' - ' + account.nama"></option></template></select></div>
+                  <div class="sm:col-span-2"><label class="label">Keterangan</label><input class="input" placeholder="Misalnya: Penjualan kredit 10 unit" x-model="form.keterangan"></div>
+                </div>
+                <p class="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-600">HPP dan pengurangan Persediaan dicatat lewat <strong class="text-zinc-950">Pengeluaran Barang</strong> pada fase P6, bukan dari tagihan piutang.</p>
+              </div>
+              <div class="overlay-footer"><button class="btn btn-outline" @click="requestClose()">Batal</button><button class="btn btn-primary" @click="save()">Simpan tagihan</button></div>
             </div>
           </div>
-          <p class="mt-2 text-[11px] text-zinc-400">Jika HPP diisi, jurnal ikut mencatat Dr HPP dan Cr Persediaan Barang.</p>
-          <div class="mt-3 flex gap-2">
-            <button class="btn btn-primary" @click="save()">Simpan tagihan</button>
-            <button class="btn btn-outline" @click="cancelAdd()">Batal</button>
-          </div>
-        </div>
+        </template>
 
         <div class="card">
           <div class="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
@@ -820,7 +815,7 @@
                   <tr class="hover:bg-zinc-50">
                     <td class="td">
                       <p class="font-medium" x-text="invoice.party ? invoice.party.nama : '—'"></p>
-                      <p class="text-[11px] text-zinc-400" x-text="invoice.keterangan"></p>
+                      <p class="text-[11px] text-zinc-400" x-text="invoice.sumber === 'penerimaan' ? 'Dokumen: ' + invoice.nomor : invoice.keterangan"></p>
                     </td>
                     <td class="td whitespace-nowrap" x-text="Format.tanggal(invoice.tanggal)"></td>
                     <td class="td whitespace-nowrap" x-text="Format.tanggal(invoice.jatuhTempo)"></td>
@@ -834,7 +829,7 @@
                       <div class="flex justify-end gap-1">
                         <button class="btn btn-ghost btn-sm" @click="openPay(invoice)" :disabled="invoice.sisa <= 0">Terima pembayaran</button>
                         <button class="btn btn-ghost btn-sm" @click="toggleHistory(invoice)" x-show="invoice.dibayar > 0">Riwayat</button>
-                        <button class="btn btn-ghost btn-sm" @click="remove(invoice)" :disabled="invoice.dibayar > 0">Hapus</button>
+                        <button class="btn btn-ghost btn-sm" @click="remove(invoice)" :disabled="invoice.dibayar > 0 || invoice.sumber === 'penerimaan'">Hapus</button>
                       </div>
                     </td>
                   </tr>
@@ -847,37 +842,26 @@
           </div>
         </div>
 
-        <div class="card card-pad" x-show="payingId && paying" x-cloak>
-          <div class="flex items-start justify-between">
-            <div>
-              <p class="section-title">Terima pembayaran</p>
-              <p class="muted mt-1" x-text="paying ? (paying.party ? paying.party.nama : '') + ' · sisa ' + Format.rupiah(paying.sisa) : ''"></p>
-            </div>
-            <button class="btn btn-ghost btn-sm" @click="cancelPay()">Tutup</button>
-          </div>
-          <div class="mt-4 grid gap-3 sm:grid-cols-3">
-            <div>
-              <label class="label">Tanggal</label>
-              <input type="date" class="input" x-model="payForm.tanggal">
-            </div>
-            <div>
-              <label class="label">Jumlah</label>
-              <input type="number" min="0" step="1" class="input num" x-model.number="payForm.jumlah">
-            </div>
-            <div>
-              <label class="label">Rekening penerima</label>
-              <select class="input" x-model="payForm.akunKasId">
-                <template x-for="account in rekening" :key="account.id">
-                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
-                </template>
-              </select>
+        <template x-teleport="body">
+          <div x-show="payingId && paying" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-0 sm:p-4"
+            @keydown.escape.window="payingId && !$store.app.dialog.open && requestClosePay()">
+            <div class="overlay-backdrop" @click="requestClosePay()"></div>
+            <div class="overlay-panel modal-panel" x-effect="Overlays.sync(!!payingId, $el)" aria-labelledby="piutang-pay-title">
+              <div class="overlay-header">
+                <div><p id="piutang-pay-title" class="section-title">Terima pembayaran</p><p class="muted mt-1" x-text="paying ? (paying.party ? paying.party.nama : '') + ' - sisa ' + Format.rupiah(paying.sisa) : ''"></p></div>
+                <button class="btn btn-ghost btn-sm" @click="requestClosePay()">Tutup</button>
+              </div>
+              <div class="overlay-body">
+                <div class="grid gap-3">
+                  <div><label class="label">Tanggal</label><input type="date" class="input" x-model="payForm.tanggal"></div>
+                  <div><label class="label">Jumlah</label><input type="number" min="0" step="1" class="input num" x-model.number="payForm.jumlah"></div>
+                  <div><label class="label">Rekening penerima</label><select class="input" x-model="payForm.akunKasId"><template x-for="account in rekening" :key="account.id"><option :value="account.id" x-text="account.kode + ' - ' + account.nama"></option></template></select></div>
+                </div>
+              </div>
+              <div class="overlay-footer"><button class="btn btn-outline" @click="requestClosePay()">Batal</button><button class="btn btn-primary" @click="savePay()">Catat pembayaran</button></div>
             </div>
           </div>
-          <div class="mt-3 flex gap-2">
-            <button class="btn btn-primary" @click="savePay()">Catat pembayaran</button>
-            <button class="btn btn-outline" @click="cancelPay()">Batal</button>
-          </div>
-        </div>
+        </template>
 
         <details class="card bg-zinc-50">
           <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-700">Cara membaca halaman ini</summary>
@@ -931,55 +915,16 @@
       <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <div>
           <h1 class="page-title" x-tooltip="'utangUsaha'">Utang</h1>
-          <p class="muted mt-1">Tagihan pembelian kredit per pemasok, sisa, dan jatuh tempo.</p>
+          <p class="muted mt-1">Tagihan pembelian kredit per pemasok, sisa, dan jatuh tempo. Tagihan dibuat otomatis dari Penerimaan Barang.</p>
         </div>
-        <button class="btn btn-primary" @click="openAdd()">Tagihan baru</button>
+        <span class="badge badge-outline">Sumber: Penerimaan Barang</span>
       </header>
 
       <div class="space-y-5 px-4 py-6 sm:px-8">
-        <div class="card card-pad" x-show="adding" x-cloak>
-          <div class="flex items-start justify-between">
-            <p class="section-title">Tagihan utang baru</p>
-            <button class="btn btn-ghost btn-sm" @click="cancelAdd()">Tutup</button>
-          </div>
-          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <label class="label">Pemasok</label>
-              <select class="input" x-model="form.partyId">
-                <template x-for="party in parties" :key="party.id">
-                  <option :value="party.id" x-text="party.nama"></option>
-                </template>
-              </select>
-            </div>
-            <div>
-              <label class="label">Tanggal</label>
-              <input type="date" class="input" x-model="form.tanggal">
-            </div>
-            <div>
-              <label class="label" x-tooltip="'jatuhTempo'">Jatuh tempo</label>
-              <input type="date" class="input" x-model="form.jatuhTempo">
-            </div>
-            <div>
-              <label class="label">Jumlah tagihan</label>
-              <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="form.total">
-            </div>
-            <div>
-              <label class="label">Akun lawan</label>
-              <select class="input" x-model="form.akunLawanId">
-                <template x-for="account in utangLawanOptions" :key="account.id">
-                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
-                </template>
-              </select>
-            </div>
-            <div class="sm:col-span-2">
-              <label class="label">Keterangan</label>
-              <input class="input" placeholder="Misalnya: Pembelian barang dagang" x-model="form.keterangan">
-            </div>
-          </div>
-          <div class="mt-3 flex gap-2">
-            <button class="btn btn-primary" @click="save()">Simpan tagihan</button>
-            <button class="btn btn-outline" @click="cancelAdd()">Batal</button>
-          </div>
+        <div class="card card-pad" x-show="piutangSupplier > 0">
+          <p class="eyebrow">Piutang Supplier</p>
+          <p class="mt-2 text-2xl font-semibold tabular-nums" x-text="Format.rupiah(piutangSupplier)"></p>
+          <p class="muted mt-1">Nilai retur yang belum diselesaikan supplier, misalnya refund atau barang pengganti.</p>
         </div>
 
         <div class="card">
@@ -996,6 +941,7 @@
                   <th class="th" x-tooltip="'jatuhTempo'">Jatuh tempo</th>
                   <th class="th num">Total</th>
                   <th class="th num">Dibayar</th>
+                  <th class="th num">Retur</th>
                   <th class="th num">Sisa</th>
                   <th class="th">Status</th>
                   <th class="th text-right">Aksi</th>
@@ -1006,12 +952,13 @@
                   <tr class="hover:bg-zinc-50">
                     <td class="td">
                       <p class="font-medium" x-text="invoice.party ? invoice.party.nama : '—'"></p>
-                      <p class="text-[11px] text-zinc-400" x-text="invoice.keterangan"></p>
+                      <p class="text-[11px] text-zinc-400" x-text="invoice.sumber === 'penerimaan' ? 'Dokumen: ' + invoice.nomor : invoice.keterangan"></p>
                     </td>
                     <td class="td whitespace-nowrap" x-text="Format.tanggal(invoice.tanggal)"></td>
                     <td class="td whitespace-nowrap" x-text="Format.tanggal(invoice.jatuhTempo)"></td>
                     <td class="td num" x-text="Format.num(invoice.total)"></td>
                     <td class="td num" x-text="Format.num(invoice.dibayar)"></td>
+                    <td class="td num" x-text="Format.num(invoice.retur)"></td>
                     <td class="td num font-medium" x-text="Format.num(invoice.sisa)" x-tooltip="invoice.tooltip"></td>
                     <td class="td">
                       <span class="badge" :class="invoice.status === 'lunas' ? 'badge-solid' : 'badge-outline'" x-text="statusLabel(invoice.status)"></span>
@@ -1020,55 +967,44 @@
                       <div class="flex justify-end gap-1">
                         <button class="btn btn-ghost btn-sm" @click="openPay(invoice)" :disabled="invoice.sisa <= 0">Bayar utang</button>
                         <button class="btn btn-ghost btn-sm" @click="toggleHistory(invoice)" x-show="invoice.dibayar > 0">Riwayat</button>
-                        <button class="btn btn-ghost btn-sm" @click="remove(invoice)" :disabled="invoice.dibayar > 0">Hapus</button>
+                        <button class="btn btn-ghost btn-sm" @click="remove(invoice)" :disabled="invoice.dibayar > 0 || invoice.sumber === 'penerimaan'">Hapus</button>
                       </div>
                     </td>
                   </tr>
                 </template>
                 <tr x-show="invoices.length === 0">
-                  <td colspan="8" class="td py-8 text-center text-zinc-500">Belum ada tagihan utang.</td>
+                  <td colspan="9" class="td py-8 text-center text-zinc-500">Belum ada tagihan utang.</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <div class="card card-pad" x-show="payingId && paying" x-cloak>
-          <div class="flex items-start justify-between">
-            <div>
-              <p class="section-title">Bayar utang</p>
-              <p class="muted mt-1" x-text="paying ? (paying.party ? paying.party.nama : '') + ' · sisa ' + Format.rupiah(paying.sisa) : ''"></p>
-            </div>
-            <button class="btn btn-ghost btn-sm" @click="cancelPay()">Tutup</button>
-          </div>
-          <div class="mt-4 grid gap-3 sm:grid-cols-3">
-            <div>
-              <label class="label">Tanggal</label>
-              <input type="date" class="input" x-model="payForm.tanggal">
-            </div>
-            <div>
-              <label class="label">Jumlah</label>
-              <input type="number" min="0" step="1" class="input num" x-model.number="payForm.jumlah">
-            </div>
-            <div>
-              <label class="label">Rekening pembayar</label>
-              <select class="input" x-model="payForm.akunKasId">
-                <template x-for="account in rekening" :key="account.id">
-                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
-                </template>
-              </select>
+        <template x-teleport="body">
+          <div x-show="payingId && paying" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-0 sm:p-4"
+            @keydown.escape.window="payingId && !$store.app.dialog.open && requestClosePay()">
+            <div class="overlay-backdrop" @click="requestClosePay()"></div>
+            <div class="overlay-panel modal-panel" x-effect="Overlays.sync(!!payingId, $el)" aria-labelledby="utang-pay-title">
+              <div class="overlay-header">
+                <div><p id="utang-pay-title" class="section-title">Bayar utang</p><p class="muted mt-1" x-text="paying ? (paying.party ? paying.party.nama : '') + ' - sisa ' + Format.rupiah(paying.sisa) : ''"></p></div>
+                <button class="btn btn-ghost btn-sm" @click="requestClosePay()">Tutup</button>
+              </div>
+              <div class="overlay-body">
+                <div class="grid gap-3">
+                  <div><label class="label">Tanggal</label><input type="date" class="input" x-model="payForm.tanggal"></div>
+                  <div><label class="label">Jumlah</label><input type="number" min="0" step="1" class="input num" x-model.number="payForm.jumlah"></div>
+                  <div><label class="label">Rekening pembayar</label><select class="input" x-model="payForm.akunKasId"><template x-for="account in rekening" :key="account.id"><option :value="account.id" x-text="account.kode + ' - ' + account.nama"></option></template></select></div>
+                </div>
+              </div>
+              <div class="overlay-footer"><button class="btn btn-outline" @click="requestClosePay()">Batal</button><button class="btn btn-primary" @click="savePay()">Catat pembayaran</button></div>
             </div>
           </div>
-          <div class="mt-3 flex gap-2">
-            <button class="btn btn-primary" @click="savePay()">Catat pembayaran</button>
-            <button class="btn btn-outline" @click="cancelPay()">Batal</button>
-          </div>
-        </div>
+        </template>
 
         <details class="card bg-zinc-50">
           <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-700">Cara membaca halaman ini</summary>
           <div class="border-t border-zinc-200 px-4 py-3 text-sm leading-relaxed text-zinc-600">
-            Utang adalah akun kewajiban 2-1100. Membuat tagihan pembelian otomatis menambah Persediaan atau Beban dan menambah Utang Usaha. Membayar utang mengurangi Utang dan mengurangi rekening kas atau bank. Pembayaran boleh sebagian, tetapi tidak boleh melebihi sisa tagihan.
+            Utang adalah akun kewajiban 2-1100. Tagihan utang dibuat otomatis saat Penerimaan Barang diposting: Persediaan bertambah dan Utang Usaha bertambah. Retur potong invoice mengurangi sisa tagihan; jika tagihan sudah dibayar, nilainya menjadi Piutang Supplier (1-1500). Membayar utang mengurangi Utang dan mengurangi rekening kas atau bank.
           </div>
         </details>
       </div>
@@ -1597,31 +1533,30 @@
           <h1 class="page-title">Rekening</h1>
           <p class="muted mt-1">Kas dan bank adalah akun aset. Saldonya sama dengan saldo Buku Besar akun tersebut.</p>
         </div>
-        <button class="btn btn-primary" @click="openAdd()">Tambah rekening</button>
+        <div class="flex flex-wrap gap-2">
+          <button class="btn btn-outline" @click="openTransfer()">Transfer</button>
+          <button class="btn btn-primary" @click="openAdd()">Tambah rekening</button>
+        </div>
       </header>
 
       <div class="space-y-5 px-4 py-6 sm:px-8">
-        <div class="card card-pad" x-show="adding" x-cloak>
-          <div class="flex items-start justify-between">
-            <p class="section-title">Rekening baru</p>
-            <button class="btn btn-ghost btn-sm" @click="cancelAdd()">Tutup</button>
-          </div>
-          <div class="mt-4 grid gap-3 sm:grid-cols-3">
-            <div class="sm:col-span-2">
-              <label class="label">Nama rekening</label>
-              <input class="input" placeholder="Misalnya: Bank Mandiri" x-model="addForm.nama">
+        <template x-teleport="body">
+          <div x-show="adding" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-0 sm:p-4"
+            @keydown.escape.window="adding && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel modal-panel" x-effect="Overlays.sync(adding, $el)" aria-labelledby="rekening-modal-title">
+              <div class="overlay-header"><p id="rekening-modal-title" class="section-title">Rekening baru</p><button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button></div>
+              <div class="overlay-body">
+                <div class="grid gap-3">
+                  <div><label class="label">Nama rekening</label><input class="input" placeholder="Misalnya: Bank Mandiri" x-model="addForm.nama"></div>
+                  <div><label class="label">No. rekening (opsional)</label><input class="input" placeholder="123-456-7890" x-model="addForm.noRekening"></div>
+                </div>
+                <p class="mt-2 text-[11px] text-zinc-400">Kode akun 1-11xx dibuat otomatis. Saldo awal diisi lewat jurnal setor modal.</p>
+              </div>
+              <div class="overlay-footer"><button class="btn btn-outline" @click="requestClose()">Batal</button><button class="btn btn-primary" @click="saveAdd()">Simpan rekening</button></div>
             </div>
-            <div>
-              <label class="label">No. rekening (opsional)</label>
-              <input class="input" placeholder="123-456-7890" x-model="addForm.noRekening">
-            </div>
           </div>
-          <p class="mt-2 text-[11px] text-zinc-400">Kode akun 1-11xx dibuat otomatis. Saldo awal diisi lewat jurnal setor modal.</p>
-          <div class="mt-3 flex gap-2">
-            <button class="btn btn-primary" @click="saveAdd()">Simpan rekening</button>
-            <button class="btn btn-outline" @click="cancelAdd()">Batal</button>
-          </div>
-        </div>
+        </template>
 
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <template x-for="account in rekening" :key="account.id">
@@ -1640,47 +1575,28 @@
           </template>
         </div>
 
-        <div class="card card-pad">
-          <div>
-            <p class="section-title" x-tooltip="'transfer'">Transfer antar rekening</p>
-            <p class="muted mt-1">Jurnal: debit rekening tujuan, kredit rekening asal. Laba dan total aset tidak berubah.</p>
-          </div>
-          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <div>
-              <label class="label">Dari rekening</label>
-              <select class="input" x-model="transferForm.dariId">
-                <option value="">Pilih…</option>
-                <template x-for="account in rekening" :key="account.id">
-                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
-                </template>
-              </select>
-            </div>
-            <div>
-              <label class="label">Ke rekening</label>
-              <select class="input" x-model="transferForm.tujuanId">
-                <option value="">Pilih…</option>
-                <template x-for="account in rekening" :key="account.id">
-                  <option :value="account.id" x-text="account.kode + ' — ' + account.nama"></option>
-                </template>
-              </select>
-            </div>
-            <div>
-              <label class="label">Tanggal</label>
-              <input type="date" class="input" x-model="transferForm.tanggal">
-            </div>
-            <div>
-              <label class="label">Jumlah</label>
-              <input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="transferForm.jumlah">
-            </div>
-            <div class="flex items-end">
-              <button class="btn btn-primary w-full" @click="transfer()">Transfer</button>
-            </div>
-            <div class="sm:col-span-2 lg:col-span-5">
-              <label class="label">Keterangan (opsional)</label>
-              <input class="input" placeholder="Misalnya: Pindah dana ke bank" x-model="transferForm.keterangan">
+        <template x-teleport="body">
+          <div x-show="transferOpen" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-0 sm:p-4"
+            @keydown.escape.window="transferOpen && !$store.app.dialog.open && requestCloseTransfer()">
+            <div class="overlay-backdrop" @click="requestCloseTransfer()"></div>
+            <div class="overlay-panel modal-panel-md" x-effect="Overlays.sync(transferOpen, $el)" aria-labelledby="transfer-modal-title">
+              <div class="overlay-header">
+                <div><p id="transfer-modal-title" class="section-title">Transfer antar rekening</p><p class="muted mt-1">Debit rekening tujuan, kredit rekening asal.</p></div>
+                <button class="btn btn-ghost btn-sm" @click="requestCloseTransfer()">Tutup</button>
+              </div>
+              <div class="overlay-body">
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <div><label class="label">Dari rekening</label><select class="input" x-model="transferForm.dariId"><option value="">Pilih…</option><template x-for="account in rekening" :key="account.id"><option :value="account.id" x-text="account.kode + ' - ' + account.nama"></option></template></select></div>
+                  <div><label class="label">Ke rekening</label><select class="input" x-model="transferForm.tujuanId"><option value="">Pilih…</option><template x-for="account in rekening" :key="account.id"><option :value="account.id" x-text="account.kode + ' - ' + account.nama"></option></template></select></div>
+                  <div><label class="label">Tanggal</label><input type="date" class="input" x-model="transferForm.tanggal"></div>
+                  <div><label class="label">Jumlah</label><input type="number" min="0" step="1" class="input num" placeholder="0" x-model.number="transferForm.jumlah"></div>
+                  <div class="sm:col-span-2"><label class="label">Keterangan (opsional)</label><input class="input" placeholder="Misalnya: Pindah dana ke bank" x-model="transferForm.keterangan"></div>
+                </div>
+              </div>
+              <div class="overlay-footer"><button class="btn btn-outline" @click="requestCloseTransfer()">Batal</button><button class="btn btn-primary" @click="transfer()">Transfer</button></div>
             </div>
           </div>
-        </div>
+        </template>
 
         <details class="card bg-zinc-50">
           <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-zinc-700">Cara membaca halaman ini</summary>
@@ -1691,21 +1607,1054 @@
       </div>
     </section>
 
+    <!-- ============================= PERSETUJUAN ============================= -->
+    <section x-show="$store.auth.canView('persetujuan') && $store.app.page === 'persetujuan'" x-cloak x-data="persetujuanPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Persetujuan</h1>
+          <p class="muted mt-1">Finance menyetujui PR dan PO. Logistik tidak bisa menyetujui dokumennya sendiri.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <span class="badge badge-outline" x-text="pendingPR.length + ' PR menunggu'"></span>
+          <span class="badge badge-outline" x-text="pendingPO.length + ' PO menunggu'"></span>
+        </div>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <div class="flex flex-wrap gap-2">
+          <button class="btn" :class="tab === 'pr' ? 'btn-primary' : 'btn-outline'" @click="tab = 'pr'">Purchase Request</button>
+          <button class="btn" :class="tab === 'po' ? 'btn-primary' : 'btn-outline'" @click="tab = 'po'">Purchase Order</button>
+        </div>
+
+        <div x-show="tab === 'pr'" class="space-y-3">
+          <template x-for="pr in prs" :key="pr.id">
+            <article class="card">
+              <div class="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <p class="font-medium" x-text="pr.nomor"></p>
+                    <span class="badge" :class="statusClass(pr.status)" x-text="statusLabel(pr.status)"></span>
+                  </div>
+                  <p class="muted mt-1" x-text="pr.tanggal + ' · ' + pr.pemohonNama + ' · ' + pr.keperluan"></p>
+                </div>
+                <div class="flex gap-2" x-show="pr.status === 'diajukan'">
+                  <button class="btn btn-primary btn-sm" @click="approvePR(pr)">Setujui</button>
+                  <button class="btn btn-danger btn-sm" @click="startReject('pr', pr.id)">Tolak</button>
+                </div>
+              </div>
+              <div class="overflow-x-auto px-4 py-3">
+                <table class="w-full">
+                  <thead>
+                    <tr><th class="th">Barang</th><th class="th num">Qty</th><th class="th">Catatan</th></tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="line in prLines(pr.id)" :key="line.id">
+                      <tr>
+                        <td class="td" x-text="barangName(line.barangId)"></td>
+                        <td class="td num" x-text="Format.num(line.qty)"></td>
+                        <td class="td" x-text="line.catatan || '—'"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+                <p class="mt-2 text-xs text-zinc-500" x-show="pr.status === 'ditolak'" x-text="'Alasan ditolak: ' + pr.alasanTolak"></p>
+                <div class="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3" x-show="rejecting.type === 'pr' && rejecting.id === pr.id">
+                  <label class="label">Alasan penolakan</label>
+                  <input class="input" x-model="rejecting.reason" placeholder="Wajib diisi">
+                  <div class="mt-2 flex gap-2">
+                    <button class="btn btn-primary btn-sm" @click="confirmReject()">Konfirmasi tolak</button>
+                    <button class="btn btn-outline btn-sm" @click="cancelReject()">Batal</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </template>
+          <p class="muted" x-show="!prs.length">Belum ada Purchase Request.</p>
+        </div>
+
+        <div x-show="tab === 'po'" class="space-y-3">
+          <template x-for="po in pos" :key="po.id">
+            <article class="card">
+              <div class="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <p class="font-medium" x-text="po.nomor"></p>
+                    <span class="badge" :class="statusClass(po.status)" x-text="poStatusLabel(po.status)"></span>
+                  </div>
+                  <p class="muted mt-1" x-text="po.tanggal + ' · ' + supplierName(po.supplierId) + ' · ' + Format.rupiah(po.total)"></p>
+                </div>
+                <div class="flex gap-2" x-show="po.status === 'menunggu_persetujuan'">
+                  <button class="btn btn-primary btn-sm" @click="approvePO(po)">Setujui</button>
+                  <button class="btn btn-danger btn-sm" @click="startReject('po', po.id)">Tolak</button>
+                </div>
+              </div>
+              <div class="overflow-x-auto px-4 py-3">
+                <table class="w-full">
+                  <thead>
+                    <tr><th class="th">Barang</th><th class="th num">Qty</th><th class="th num">Harga</th><th class="th num">Subtotal</th></tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="line in poLines(po.id)" :key="line.id">
+                      <tr>
+                        <td class="td" x-text="barangName(line.barangId)"></td>
+                        <td class="td num" x-text="Format.num(line.qty)"></td>
+                        <td class="td num" x-text="Format.rupiah(line.harga)"></td>
+                        <td class="td num" x-text="Format.rupiah(line.qty * line.harga)"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+                <p class="mt-2 text-xs text-zinc-500" x-show="po.status === 'ditolak'" x-text="'Alasan ditolak: ' + po.alasanTolak"></p>
+                <div class="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3" x-show="rejecting.type === 'po' && rejecting.id === po.id">
+                  <label class="label">Alasan penolakan</label>
+                  <input class="input" x-model="rejecting.reason" placeholder="Wajib diisi">
+                  <div class="mt-2 flex gap-2">
+                    <button class="btn btn-primary btn-sm" @click="confirmReject()">Konfirmasi tolak</button>
+                    <button class="btn btn-outline btn-sm" @click="cancelReject()">Batal</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </template>
+          <p class="muted" x-show="!pos.length">Belum ada Purchase Order.</p>
+        </div>
+
+        <div class="card card-pad">
+          <p class="section-title">Pengaturan purchasing</p>
+          <p class="muted mt-1">PO di atas ambang harus disetujui Finance. Toleransi penerimaan dipakai saat qty datang melebihi sisa PO.</p>
+          <div class="mt-3 flex flex-wrap items-end gap-2">
+            <div>
+              <label class="label">Ambang PO (Rp)</label>
+              <input type="number" min="0" step="1" class="input num" x-model.number="threshold">
+            </div>
+            <div>
+              <label class="label">Toleransi penerimaan (qty)</label>
+              <input type="number" min="0" step="1" class="input num" x-model.number="tolerance">
+            </div>
+            <button class="btn btn-primary" @click="saveSettings()">Simpan pengaturan</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="border-b border-zinc-200 px-4 py-3"><p class="section-title">Aktivitas terakhir</p></div>
+          <div class="divide-y divide-zinc-100">
+            <template x-for="(item, index) in activity" :key="index">
+              <div class="flex flex-col gap-1 px-4 py-2 text-xs text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
+                <span x-text="item.waktu.slice(0, 16).replace('T', ' ') + ' · ' + item.nama + ' · ' + item.aksi"></span>
+                <span class="font-mono text-zinc-400" x-text="item.dokumen || ''"></span>
+              </div>
+            </template>
+            <p class="px-4 py-6 text-center text-sm text-zinc-500" x-show="!activity.length">Belum ada aktivitas purchasing.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= MASTER BARANG ============================= -->
+    <section x-show="$store.auth.canView('masterBarang') && $store.app.page === 'masterBarang'" x-cloak x-data="masterBarangPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Master Barang</h1>
+          <p class="muted mt-1">Barang, harga beli standar, stok minimum, dan akun persediaan.</p>
+        </div>
+        <button class="btn btn-primary" @click="openAdd()">Tambah barang</button>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <template x-teleport="body">
+          <div x-show="adding" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-0 sm:p-4"
+            @keydown.escape.window="adding && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel modal-panel" x-effect="Overlays.sync(adding, $el)" aria-labelledby="master-barang-title">
+              <div class="overlay-header">
+                <p id="master-barang-title" class="section-title" x-text="editingId ? 'Ubah barang' : 'Barang baru'"></p>
+                <button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button>
+              </div>
+              <div class="overlay-body">
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <div><label class="label">Kode / SKU</label><input class="input" x-model="form.kode" placeholder="BRG-0001"></div>
+                  <div><label class="label">Nama barang</label><input class="input" x-model="form.nama"></div>
+                  <div><label class="label">Kategori</label>
+                    <select class="input" x-model="form.kategoriId">
+                      <template x-for="item in categories" :key="item.id"><option :value="item.id" x-text="item.nama"></option></template>
+                    </select>
+                  </div>
+                  <div><label class="label">Satuan</label>
+                    <select class="input" x-model="form.satuanId">
+                      <template x-for="item in units" :key="item.id"><option :value="item.id" x-text="item.nama + ' (' + item.singkatan + ')'"></option></template>
+                    </select>
+                  </div>
+                  <div><label class="label">Harga beli standar</label><input type="number" min="0" step="1" class="input num" x-model.number="form.hargaBeliStandar"></div>
+                  <div><label class="label">Stok minimum</label><input type="number" min="0" step="1" class="input num" x-model.number="form.stokMinimum"></div>
+                  <label class="flex items-end gap-2 pb-1.5 text-sm text-zinc-700"><input type="checkbox" class="h-4 w-4 rounded border-zinc-300" x-model="form.kelolaStok"> Kelola stok</label>
+                </div>
+              </div>
+              <div class="overlay-footer">
+                <button class="btn btn-outline" @click="requestClose()">Batal</button>
+                <button class="btn btn-primary" @click="save()">Simpan barang</button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <div class="card">
+          <div class="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p class="section-title">Daftar barang</p>
+            <div class="flex flex-wrap gap-2">
+              <input class="input" placeholder="Cari kode atau nama…" x-model="search">
+              <select class="input" x-model="kategoriFilter">
+                <option value="">Semua kategori</option>
+                <template x-for="item in categories" :key="item.id"><option :value="item.id" x-text="item.nama"></option></template>
+              </select>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead><tr><th class="th">Kode</th><th class="th">Nama</th><th class="th">Kategori</th><th class="th">Satuan</th><th class="th num">Harga beli</th><th class="th num">Stok</th><th class="th num">Minimum</th><th class="th">Status</th><th class="th text-right">Aksi</th></tr></thead>
+              <tbody>
+                <template x-for="row in rows" :key="row.barang.id">
+                  <tr class="hover:bg-zinc-50" :class="row.barang.aktif === false ? 'opacity-50' : ''">
+                    <td class="td font-mono text-xs" x-text="row.barang.kode"></td>
+                    <td class="td">
+                      <span x-text="row.barang.nama"></span>
+                      <span class="ml-1.5 badge badge-outline" x-show="row.diBawahMinimum">Di bawah minimum</span>
+                    </td>
+                    <td class="td" x-text="kategoriName(row.barang.kategoriId)"></td>
+                    <td class="td" x-text="satuanName(row.barang.satuanId)"></td>
+                    <td class="td num" x-text="Format.rupiah(row.barang.hargaBeliStandar)"></td>
+                    <td class="td num" x-text="Format.num(row.qty)"></td>
+                    <td class="td num" x-text="Format.num(row.barang.stokMinimum)"></td>
+                    <td class="td"><span class="badge" :class="row.barang.aktif === false ? 'badge-outline' : 'badge-solid'" x-text="row.barang.aktif === false ? 'Nonaktif' : 'Aktif'"></span></td>
+                    <td class="td">
+                      <div class="flex justify-end gap-1">
+                        <button class="btn btn-ghost btn-sm" @click="startEdit(row)">Ubah</button>
+                        <button class="btn btn-ghost btn-sm" @click="toggle(row)" x-text="row.barang.aktif === false ? 'Aktifkan' : 'Nonaktifkan'"></button>
+                        <button class="btn btn-ghost btn-sm" @click="remove(row)">Hapus</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+                <tr x-show="!rows.length"><td colspan="9" class="td py-6 text-center text-zinc-500">Belum ada barang.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= MASTER SUPPLIER ============================= -->
+    <section x-show="$store.auth.canView('masterSupplier') && $store.app.page === 'masterSupplier'" x-cloak x-data="masterSupplierPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Master Supplier</h1>
+          <p class="muted mt-1">Supplier, termin bayar, dan harga khusus per barang.</p>
+        </div>
+        <button class="btn btn-primary" @click="openAdd()">Tambah supplier</button>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <div class="flex flex-wrap gap-2">
+          <button class="btn" :class="tab === 'supplier' ? 'btn-primary' : 'btn-outline'" @click="tab = 'supplier'">Supplier</button>
+          <button class="btn" :class="tab === 'harga' ? 'btn-primary' : 'btn-outline'" @click="tab = 'harga'">Harga Supplier</button>
+        </div>
+
+        <template x-teleport="body">
+          <div x-show="adding" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-0 sm:p-4"
+            @keydown.escape.window="adding && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel modal-panel-md" x-effect="Overlays.sync(adding, $el)" aria-labelledby="master-supplier-title">
+              <div class="overlay-header">
+                <p id="master-supplier-title" class="section-title" x-text="editingId ? 'Ubah supplier' : 'Supplier baru'"></p>
+                <button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button>
+              </div>
+              <div class="overlay-body">
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <div><label class="label">Kode</label><input class="input" x-model="form.kode"></div>
+                  <div><label class="label">Nama supplier</label><input class="input" x-model="form.nama"></div>
+                  <div><label class="label">Kontak</label><input class="input" x-model="form.kontak"></div>
+                  <div><label class="label">Telepon</label><input class="input" x-model="form.telepon"></div>
+                  <div><label class="label">Termin bayar (hari)</label><input type="number" min="0" step="1" class="input num" x-model.number="form.terminBayar"></div>
+                  <div class="sm:col-span-2"><label class="label">Alamat</label><input class="input" x-model="form.alamat"></div>
+                </div>
+              </div>
+              <div class="overlay-footer">
+                <button class="btn btn-outline" @click="requestClose()">Batal</button>
+                <button class="btn btn-primary" @click="save()">Simpan supplier</button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <div x-show="tab === 'supplier'" class="card">
+          <div class="border-b border-zinc-200 px-4 py-3"><p class="section-title">Daftar supplier</p></div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead><tr><th class="th">Kode</th><th class="th">Nama</th><th class="th">Kontak</th><th class="th num">Termin</th><th class="th">Status</th><th class="th text-right">Aksi</th></tr></thead>
+              <tbody>
+                <template x-for="supplier in suppliers" :key="supplier.id">
+                  <tr class="hover:bg-zinc-50" :class="supplier.aktif === false ? 'opacity-50' : ''">
+                    <td class="td font-mono text-xs" x-text="supplier.kode"></td>
+                    <td class="td" x-text="supplier.nama"></td>
+                    <td class="td">
+                      <span x-text="supplier.kontak || '—'"></span>
+                      <p class="text-[11px] text-zinc-400" x-text="supplier.telepon || ''"></p>
+                    </td>
+                    <td class="td num" x-text="Format.num(supplier.terminBayar) + ' hari'"></td>
+                    <td class="td"><span class="badge" :class="supplier.aktif === false ? 'badge-outline' : 'badge-solid'" x-text="supplier.aktif === false ? 'Nonaktif' : 'Aktif'"></span></td>
+                    <td class="td">
+                      <div class="flex justify-end gap-1">
+                        <button class="btn btn-ghost btn-sm" @click="openHarga(supplier)">Harga</button>
+                        <button class="btn btn-ghost btn-sm" @click="startEdit(supplier)">Ubah</button>
+                        <button class="btn btn-ghost btn-sm" @click="toggle(supplier)" x-text="supplier.aktif === false ? 'Aktifkan' : 'Nonaktifkan'"></button>
+                        <button class="btn btn-ghost btn-sm" @click="remove(supplier)">Hapus</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+                <tr x-show="!suppliers.length"><td colspan="6" class="td py-6 text-center text-zinc-500">Belum ada supplier.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div x-show="tab === 'harga'" class="space-y-4">
+          <div class="flex justify-end">
+            <button class="btn btn-primary" @click="openHargaModal()">Tambah harga</button>
+          </div>
+          <template x-teleport="body">
+            <div x-show="hargaModal" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-0 sm:p-4"
+              @keydown.escape.window="hargaModal && !$store.app.dialog.open && requestClose()">
+              <div class="overlay-backdrop" @click="requestClose()"></div>
+              <div class="overlay-panel modal-panel-md" x-effect="Overlays.sync(hargaModal, $el)" aria-labelledby="harga-supplier-title">
+                <div class="overlay-header">
+                  <div>
+                    <p id="harga-supplier-title" class="section-title">Harga supplier</p>
+                    <p class="muted mt-1">Harga terbaru per tanggal berlaku dipakai otomatis saat membuat PO.</p>
+                  </div>
+                  <button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button>
+                </div>
+                <div class="overlay-body">
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <div><label class="label">Supplier</label>
+                      <select class="input" x-model="hargaForm.supplierId">
+                        <option value="">Pilih supplier…</option>
+                        <template x-for="supplier in suppliers" :key="supplier.id"><option :value="supplier.id" x-text="supplier.nama"></option></template>
+                      </select>
+                    </div>
+                    <div><label class="label">Barang</label>
+                      <select class="input" x-model="hargaForm.barangId">
+                        <option value="">Pilih barang…</option>
+                        <template x-for="item in items" :key="item.id"><option :value="item.id" x-text="item.nama"></option></template>
+                      </select>
+                    </div>
+                    <div><label class="label">Harga</label><input type="number" min="0" step="1" class="input num" x-model.number="hargaForm.harga"></div>
+                    <div><label class="label">Berlaku mulai</label><input type="date" class="input" x-model="hargaForm.berlakuMulai"></div>
+                  </div>
+                </div>
+                <div class="overlay-footer">
+                  <button class="btn btn-outline" @click="requestClose()">Batal</button>
+                  <button class="btn btn-primary" @click="saveHarga()">Simpan harga</button>
+                </div>
+              </div>
+            </div>
+          </template>
+          <div class="card">
+            <div class="border-b border-zinc-200 px-4 py-3"><p class="section-title">Riwayat harga</p></div>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead><tr><th class="th">Barang</th><th class="th num">Harga</th><th class="th">Berlaku mulai</th></tr></thead>
+                <tbody>
+                  <template x-for="row in hargaRows" :key="row.id">
+                    <tr><td class="td" x-text="row.barangNama"></td><td class="td num" x-text="Format.rupiah(row.harga)"></td><td class="td" x-text="row.berlakuMulai"></td></tr>
+                  </template>
+                  <tr x-show="!hargaRows.length"><td colspan="3" class="td py-6 text-center text-zinc-500">Pilih supplier untuk melihat harga.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= MASTER PENDUKUNG ============================= -->
+    <section x-show="$store.auth.canView('masterPendukung') && $store.app.page === 'masterPendukung'" x-cloak x-data="masterPendukungPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Master Kategori, Satuan, Gudang</h1>
+          <p class="muted mt-1">Data pendukung untuk barang dan penerimaan.</p>
+        </div>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <div class="flex flex-wrap gap-2">
+          <button class="btn" :class="tab === 'kategori' ? 'btn-primary' : 'btn-outline'" @click="tab = 'kategori'">Kategori</button>
+          <button class="btn" :class="tab === 'satuan' ? 'btn-primary' : 'btn-outline'" @click="tab = 'satuan'">Satuan</button>
+          <button class="btn" :class="tab === 'gudang' ? 'btn-primary' : 'btn-outline'" @click="tab = 'gudang'">Gudang</button>
+        </div>
+
+        <template x-teleport="body">
+          <div x-show="modal === 'kategori'" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-0 sm:p-4"
+            @keydown.escape.window="modal === 'kategori' && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel modal-panel" x-effect="Overlays.sync(modal === 'kategori', $el)" aria-labelledby="kategori-modal-title">
+              <div class="overlay-header"><p id="kategori-modal-title" class="section-title">Kategori baru</p><button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button></div>
+              <div class="overlay-body"><div class="grid gap-3"><div><label class="label">Kode</label><input class="input" x-model="kategoriForm.kode" placeholder="SEM"></div><div><label class="label">Nama</label><input class="input" x-model="kategoriForm.nama"></div></div></div>
+              <div class="overlay-footer"><button class="btn btn-outline" @click="requestClose()">Batal</button><button class="btn btn-primary" @click="addKategori()">Tambah kategori</button></div>
+            </div>
+          </div>
+        </template>
+        <template x-teleport="body">
+          <div x-show="modal === 'satuan'" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-0 sm:p-4"
+            @keydown.escape.window="modal === 'satuan' && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel modal-panel" x-effect="Overlays.sync(modal === 'satuan', $el)" aria-labelledby="satuan-modal-title">
+              <div class="overlay-header"><p id="satuan-modal-title" class="section-title">Satuan baru</p><button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button></div>
+              <div class="overlay-body"><div class="grid gap-3"><div><label class="label">Nama</label><input class="input" x-model="satuanForm.nama" placeholder="Sak"></div><div><label class="label">Singkatan</label><input class="input" x-model="satuanForm.singkatan" placeholder="sak"></div></div></div>
+              <div class="overlay-footer"><button class="btn btn-outline" @click="requestClose()">Batal</button><button class="btn btn-primary" @click="addSatuan()">Tambah satuan</button></div>
+            </div>
+          </div>
+        </template>
+        <template x-teleport="body">
+          <div x-show="modal === 'gudang'" x-cloak class="fixed inset-0 z-40 flex items-center justify-center p-0 sm:p-4"
+            @keydown.escape.window="modal === 'gudang' && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel modal-panel" x-effect="Overlays.sync(modal === 'gudang', $el)" aria-labelledby="gudang-modal-title">
+              <div class="overlay-header"><p id="gudang-modal-title" class="section-title">Gudang baru</p><button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button></div>
+              <div class="overlay-body"><div class="grid gap-3"><div><label class="label">Kode</label><input class="input" x-model="gudangForm.kode" placeholder="GDG-02"></div><div><label class="label">Nama</label><input class="input" x-model="gudangForm.nama"></div><label class="flex items-center gap-2 text-sm text-zinc-700"><input type="checkbox" class="h-4 w-4 rounded border-zinc-300" x-model="gudangForm.utama"> Jadikan gudang utama</label></div></div>
+              <div class="overlay-footer"><button class="btn btn-outline" @click="requestClose()">Batal</button><button class="btn btn-primary" @click="addGudang()">Tambah gudang</button></div>
+            </div>
+          </div>
+        </template>
+        <div x-show="tab === 'kategori'" class="space-y-4">
+          <div class="flex justify-end"><button class="btn btn-primary" @click="openForm('kategori')">Tambah kategori</button></div>
+          <div class="card"><div class="border-b border-zinc-200 px-4 py-3"><p class="section-title">Daftar kategori</p></div>
+            <div class="overflow-x-auto"><table class="w-full"><thead><tr><th class="th">Kode</th><th class="th">Nama</th><th class="th">Status</th><th class="th text-right">Aksi</th></tr></thead>
+              <tbody><template x-for="item in kategoris" :key="item.id"><tr><td class="td font-mono text-xs" x-text="item.kode"></td><td class="td" x-text="item.nama"></td><td class="td"><span class="badge" :class="item.aktif === false ? 'badge-outline' : 'badge-solid'" x-text="item.aktif === false ? 'Nonaktif' : 'Aktif'"></span></td><td class="td text-right"><button class="btn btn-ghost btn-sm" @click="toggleKategori(item)" x-text="item.aktif === false ? 'Aktifkan' : 'Nonaktifkan'"></button></td></tr></template></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <div x-show="tab === 'satuan'" class="space-y-4">
+          <div class="flex justify-end"><button class="btn btn-primary" @click="openForm('satuan')">Tambah satuan</button></div>
+          <div class="card"><div class="border-b border-zinc-200 px-4 py-3"><p class="section-title">Daftar satuan</p></div>
+            <div class="overflow-x-auto"><table class="w-full"><thead><tr><th class="th">Nama</th><th class="th">Singkatan</th><th class="th">Status</th><th class="th text-right">Aksi</th></tr></thead>
+              <tbody><template x-for="item in satuans" :key="item.id"><tr><td class="td" x-text="item.nama"></td><td class="td" x-text="item.singkatan"></td><td class="td"><span class="badge" :class="item.aktif === false ? 'badge-outline' : 'badge-solid'" x-text="item.aktif === false ? 'Nonaktif' : 'Aktif'"></span></td><td class="td text-right"><button class="btn btn-ghost btn-sm" @click="toggleSatuan(item)" x-text="item.aktif === false ? 'Aktifkan' : 'Nonaktifkan'"></button></td></tr></template></tbody>
+            </table></div>
+          </div>
+        </div>
+
+        <div x-show="tab === 'gudang'" class="space-y-4">
+          <div class="flex justify-end"><button class="btn btn-primary" @click="openForm('gudang')">Tambah gudang</button></div>
+          <div class="card"><div class="border-b border-zinc-200 px-4 py-3"><p class="section-title">Daftar gudang</p></div>
+            <div class="overflow-x-auto"><table class="w-full"><thead><tr><th class="th">Kode</th><th class="th">Nama</th><th class="th">Status</th><th class="th text-right">Aksi</th></tr></thead>
+              <tbody><template x-for="item in gudangs" :key="item.id"><tr><td class="td font-mono text-xs" x-text="item.kode"></td><td class="td"><span x-text="item.nama"></span><span class="ml-1.5 badge badge-outline" x-show="item.utama">Utama</span></td><td class="td"><span class="badge" :class="item.aktif === false ? 'badge-outline' : 'badge-solid'" x-text="item.aktif === false ? 'Nonaktif' : 'Aktif'"></span></td><td class="td text-right"><div class="flex justify-end gap-1"><button class="btn btn-ghost btn-sm" @click="setUtama(item)" x-show="!item.utama">Jadikan utama</button><button class="btn btn-ghost btn-sm" @click="toggleGudang(item)" x-text="item.aktif === false ? 'Aktifkan' : 'Nonaktifkan'"></button></div></td></tr></template></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= PURCHASE REQUEST ============================= -->
+    <section x-show="$store.auth.canView('purchaseRequest') && $store.app.page === 'purchaseRequest'" x-cloak x-data="purchaseRequestPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Purchase Request</h1>
+          <p class="muted mt-1">Permintaan pembelian internal. PR belum menjadi utang dan belum mengikat supplier.</p>
+        </div>
+        <button class="btn btn-primary" @click="openAdd()">Buat PR</button>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <template x-teleport="body">
+          <div x-show="adding" x-cloak class="fixed inset-0 z-40 flex items-stretch justify-end p-0"
+            @keydown.escape.window="adding && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel drawer-panel" x-effect="Overlays.sync(adding, $el)" aria-labelledby="pr-modal-title">
+              <div class="overlay-header">
+                <div><p id="pr-modal-title" class="section-title">PR baru</p><p class="muted mt-1">Permintaan pembelian internal.</p></div>
+                <button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button>
+              </div>
+              <div class="overlay-body">
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <div><label class="label">Tanggal</label><input type="date" class="input" x-model="form.tanggal"></div>
+                  <div><label class="label">Keperluan</label><input class="input" x-model="form.keperluan" placeholder="Misalnya: Restok November"></div>
+                </div>
+                <div class="mt-4 overflow-x-auto rounded-md border border-zinc-200">
+                  <table class="w-full">
+                    <thead class="bg-zinc-50"><tr><th class="th">Barang</th><th class="th num">Qty</th><th class="th">Catatan</th><th class="th"></th></tr></thead>
+                    <tbody>
+                      <template x-for="(line, index) in form.lines" :key="index">
+                        <tr>
+                          <td class="td"><select class="input" x-model="line.barangId"><option value="">Pilih barang…</option><template x-for="item in items" :key="item.id"><option :value="item.id" x-text="item.kode + ' - ' + item.nama"></option></template></select></td>
+                          <td class="td"><input type="number" min="1" step="1" class="input num" x-model.number="line.qty"></td>
+                          <td class="td"><input class="input" x-model="line.catatan" placeholder="Opsional"></td>
+                          <td class="td text-right"><button class="btn btn-ghost btn-sm" @click="removeLine(index)" :disabled="form.lines.length <= 1">Hapus</button></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+                <button class="btn btn-outline btn-sm mt-3" @click="addLine()">Tambah baris</button>
+              </div>
+              <div class="overlay-footer">
+                <button class="btn btn-outline" @click="requestClose()">Batal</button>
+                <button class="btn btn-primary" @click="save()">Simpan draft</button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <div class="card">
+          <div class="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p class="section-title whitespace-nowrap">Daftar PR</p>
+            <select class="input" x-model="filter">
+              <option value="">Semua status</option>
+              <option value="draft">Draft</option>
+              <option value="diajukan">Diajukan</option>
+              <option value="disetujui">Disetujui</option>
+              <option value="ditolak">Ditolak</option>
+              <option value="diproses">Diproses</option>
+              <option value="selesai">Selesai</option>
+            </select>
+          </div>
+          <div class="divide-y divide-zinc-100">
+            <template x-for="pr in list" :key="pr.id">
+              <div class="px-4 py-3">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <p class="font-medium" x-text="pr.nomor"></p>
+                      <span class="badge" :class="statusClass(pr.status)" x-text="statusLabel(pr.status)"></span>
+                    </div>
+                    <p class="muted mt-1" x-text="pr.tanggal + ' · ' + pr.keperluan"></p>
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <button class="btn btn-outline btn-sm" @click="toggleDetail(pr)" x-text="detailId === pr.id ? 'Tutup' : 'Rincian'"></button>
+                    <button class="btn btn-primary btn-sm" x-show="pr.status === 'draft'" @click="submit(pr)">Ajukan</button>
+                    <button class="btn btn-primary btn-sm" x-show="pr.status === 'disetujui' || pr.status === 'diproses'" @click="$store.app.openPurchaseOrder(pr.id)">Buat PO</button>
+                  </div>
+                </div>
+                <p class="mt-2 text-xs text-zinc-500" x-show="pr.status === 'ditolak'" x-text="'Alasan ditolak: ' + pr.alasanTolak"></p>
+                <div class="mt-3 overflow-x-auto" x-show="detailId === pr.id">
+                  <table class="w-full"><thead><tr><th class="th">Barang</th><th class="th num">Qty</th><th class="th">Catatan</th></tr></thead>
+                    <tbody><template x-for="line in linesOf(pr)" :key="line.id"><tr><td class="td" x-text="barangName(line.barangId)"></td><td class="td num" x-text="Format.num(line.qty) + ' ' + satuanName(line.barangId)"></td><td class="td" x-text="line.catatan || '—'"></td></tr></template></tbody>
+                  </table>
+                  <div class="mt-3 space-y-1 text-xs text-zinc-500">
+                    <p class="font-medium text-zinc-700">Riwayat</p>
+                    <template x-for="(item, index) in (pr.riwayat || [])" :key="index">
+                      <p x-text="item.waktu.slice(0, 16).replace('T', ' ') + ' · ' + item.nama + ' · ' + item.aksi + (item.catatan ? ' — ' + item.catatan : '')"></p>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <p class="px-4 py-6 text-center text-sm text-zinc-500" x-show="!list.length">Belum ada PR.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= PURCHASE ORDER ============================= -->
+    <section x-show="$store.auth.canView('purchaseOrder') && $store.app.page === 'purchaseOrder'" x-cloak x-data="purchaseOrderPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Purchase Order</h1>
+          <p class="muted mt-1">PO adalah komitmen. Jurnal dan utang baru muncul saat barang diterima.</p>
+        </div>
+        <button class="btn btn-primary" @click="openAdd()">Buat PO</button>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <template x-teleport="body">
+          <div x-show="adding" x-cloak class="fixed inset-0 z-40 flex items-stretch justify-end p-0"
+            @keydown.escape.window="adding && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel drawer-panel" x-effect="Overlays.sync(adding, $el)" aria-labelledby="po-modal-title">
+              <div class="overlay-header">
+                <div><p id="po-modal-title" class="section-title">PO baru</p><p class="muted mt-1">PO adalah komitmen; utang muncul saat penerimaan.</p></div>
+                <button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button>
+              </div>
+              <div class="overlay-body">
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div><label class="label">Supplier</label>
+                    <select class="input" x-model="form.supplierId" @change="onSupplierChange()">
+                      <option value="">Pilih supplier…</option>
+                      <template x-for="supplier in suppliers" :key="supplier.id"><option :value="supplier.id" x-text="supplier.nama"></option></template>
+                    </select>
+                  </div>
+                  <div><label class="label">Dari PR (opsional)</label>
+                    <select class="input" x-model="form.prId" @change="loadPR()">
+                      <option value="">PO manual</option>
+                      <template x-for="pr in approvedPRs" :key="pr.id"><option :value="pr.id" x-text="pr.nomor + ' - ' + pr.keperluan"></option></template>
+                    </select>
+                  </div>
+                  <div><label class="label">Tanggal</label><input type="date" class="input" x-model="form.tanggal"></div>
+                  <div><label class="label">Termin (hari)</label><input type="number" min="0" step="1" class="input num" x-model.number="form.terminBayar"></div>
+                  <div class="sm:col-span-2 lg:col-span-4"><label class="label">Catatan</label><input class="input" x-model="form.catatan"></div>
+                </div>
+                <div class="mt-4 overflow-x-auto rounded-md border border-zinc-200">
+                  <table class="w-full">
+                    <thead class="bg-zinc-50"><tr><th class="th">Barang</th><th class="th num">Qty</th><th class="th num">Harga</th><th class="th num">Subtotal</th><th class="th"></th></tr></thead>
+                    <tbody>
+                      <template x-for="(line, index) in form.lines" :key="index">
+                        <tr>
+                          <td class="td"><select class="input" x-model="line.barangId" @change="refreshPrices()"><option value="">Pilih barang…</option><template x-for="item in items" :key="item.id"><option :value="item.id" x-text="item.kode + ' - ' + item.nama"></option></template></select></td>
+                          <td class="td"><input type="number" min="1" step="1" class="input num" x-model.number="line.qty"></td>
+                          <td class="td"><input type="number" min="0" step="1" class="input num" x-model.number="line.harga"></td>
+                          <td class="td num" x-text="Format.rupiah(line.qty * line.harga || 0)"></td>
+                          <td class="td text-right"><button class="btn btn-ghost btn-sm" @click="removeLine(index)" :disabled="form.lines.length <= 1">Hapus</button></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                    <tfoot class="border-t-2 border-zinc-950"><tr><td class="td font-semibold" colspan="3">Total PO</td><td class="td num font-semibold" x-text="Format.rupiah(totalForm)"></td><td></td></tr></tfoot>
+                  </table>
+                </div>
+                <button class="btn btn-outline btn-sm mt-3" @click="addLine()">Tambah baris</button>
+              </div>
+              <div class="overlay-footer">
+                <span class="mr-auto text-sm text-zinc-500" x-text="'Total: ' + Format.rupiah(totalForm)"></span>
+                <button class="btn btn-outline" @click="requestClose()">Batal</button>
+                <button class="btn btn-primary" @click="save()">Simpan PO</button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <div class="card">
+          <div class="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p class="section-title whitespace-nowrap">Daftar PO</p>
+            <select class="input" x-model="filter">
+              <option value="">Semua status</option>
+              <option value="menunggu_persetujuan">Menunggu persetujuan</option>
+              <option value="disetujui">Disetujui</option>
+              <option value="ditolak">Ditolak</option>
+              <option value="dikirim">Dikirim</option>
+              <option value="diterima_sebagian">Diterima sebagian</option>
+              <option value="diterima_penuh">Diterima penuh</option>
+              <option value="ditutup">Ditutup</option>
+              <option value="dibatalkan">Dibatalkan</option>
+            </select>
+          </div>
+          <div class="divide-y divide-zinc-100">
+            <template x-for="po in list" :key="po.id">
+              <div class="px-4 py-3">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <p class="font-medium" x-text="po.nomor"></p>
+                      <span class="badge" :class="statusClass(po.status)" x-text="statusLabel(po.status)"></span>
+                    </div>
+                    <p class="muted mt-1" x-text="po.tanggal + ' · ' + supplierName(po.supplierId) + ' · ' + Format.rupiah(po.total)"></p>
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <button class="btn btn-outline btn-sm" @click="toggleDetail(po)" x-text="detailId === po.id ? 'Tutup' : 'Rincian'"></button>
+                    <button class="btn btn-primary btn-sm" x-show="po.status === 'disetujui'" @click="send(po)">Tandai terkirim</button>
+                    <button class="btn btn-outline btn-sm" x-show="['draft','menunggu_persetujuan','disetujui'].indexOf(po.status) >= 0" @click="cancel(po)">Batalkan</button>
+                    <button class="btn btn-outline btn-sm" x-show="['disetujui','dikirim','diterima_sebagian'].indexOf(po.status) >= 0" @click="close(po)">Tutup PO</button>
+                  </div>
+                </div>
+                <p class="mt-2 text-xs text-zinc-500" x-show="po.status === 'ditolak'" x-text="'Alasan ditolak: ' + po.alasanTolak"></p>
+                <p class="mt-2 text-xs text-zinc-500" x-show="po.disetujuiNama" x-text="'Disetujui oleh: ' + po.disetujuiNama"></p>
+                <div class="mt-3 overflow-x-auto" x-show="detailId === po.id">
+                  <table class="w-full"><thead><tr><th class="th">Barang</th><th class="th num">Qty</th><th class="th num">Diterima</th><th class="th num">Harga</th><th class="th num">Subtotal</th><th class="th">Penerimaan</th></tr></thead>
+                    <tbody><template x-for="line in linesOf(po)" :key="line.id"><tr><td class="td" x-text="barangName(line.barangId)"></td><td class="td num" x-text="Format.num(line.qty)"></td><td class="td num" x-text="Format.num(line.qtyDiterima)"></td><td class="td num" x-text="Format.rupiah(line.harga)"></td><td class="td num" x-text="Format.rupiah(line.qty * line.harga)"></td><td class="td"><span x-text="receiptNumbers(po)"></span></td></tr></template></tbody>
+                  </table>
+                  <div class="mt-3 space-y-1 text-xs text-zinc-500">
+                    <p class="font-medium text-zinc-700">Riwayat</p>
+                    <template x-for="(item, index) in (po.riwayat || [])" :key="index">
+                      <p x-text="item.waktu.slice(0, 16).replace('T', ' ') + ' · ' + item.nama + ' · ' + item.aksi + (item.catatan ? ' — ' + item.catatan : '')"></p>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <p class="px-4 py-6 text-center text-sm text-zinc-500" x-show="!list.length">Belum ada PO.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= PENERIMAAN ============================= -->
+    <section x-show="$store.auth.canView('penerimaan') && $store.app.page === 'penerimaan'" x-cloak x-data="receivingPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Penerimaan Barang</h1>
+          <p class="muted mt-1">Posting penerimaan menambah stok dan membuat tagihan utang otomatis.</p>
+        </div>
+        <button class="btn btn-primary" @click="openAdd()">Buat penerimaan</button>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <template x-teleport="body">
+          <div x-show="adding" x-cloak class="fixed inset-0 z-40 flex items-stretch justify-end p-0"
+            @keydown.escape.window="adding && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel drawer-panel" x-effect="Overlays.sync(adding, $el)" aria-labelledby="receiving-modal-title">
+              <div class="overlay-header">
+                <div><p id="receiving-modal-title" class="section-title">Penerimaan baru</p><p class="muted mt-1">Posting menambah stok dan membuat tagihan utang.</p></div>
+                <button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button>
+              </div>
+              <div class="overlay-body">
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div><label class="label">PO</label>
+                    <select class="input" x-model="form.poId" @change="loadPO()">
+                      <option value="">Pilih PO…</option>
+                      <template x-for="po in openPOs" :key="po.id"><option :value="po.id" x-text="po.nomor + ' - ' + supplierName(po.supplierId)"></option></template>
+                    </select>
+                  </div>
+                  <div><label class="label">Tanggal</label><input type="date" class="input" x-model="form.tanggal"></div>
+                  <div><label class="label">Gudang</label>
+                    <select class="input" x-model="form.gudangId">
+                      <template x-for="gudang in gudangs" :key="gudang.id"><option :value="gudang.id" x-text="gudang.nama"></option></template>
+                    </select>
+                  </div>
+                  <div><label class="label">Surat jalan</label><input class="input" x-model="form.suratJalan" placeholder="Opsional"></div>
+                </div>
+                <div class="mt-4 overflow-x-auto rounded-md border border-zinc-200">
+                  <table class="w-full">
+                    <thead class="bg-zinc-50"><tr><th class="th">Barang</th><th class="th num">Sisa PO</th><th class="th num">Qty diterima</th><th class="th num">Harga</th><th class="th num">Subtotal</th></tr></thead>
+                    <tbody>
+                      <template x-for="(line, index) in form.lines" :key="line.poLineId">
+                        <tr>
+                          <td class="td" x-text="line.barangNama"></td>
+                          <td class="td num" x-text="Format.num(line.remaining)"></td>
+                          <td class="td"><input type="number" min="0" step="1" class="input num" x-model.number="line.qty"></td>
+                          <td class="td num" x-text="Format.rupiah(line.harga)"></td>
+                          <td class="td num" x-text="Format.rupiah((line.qty || 0) * line.harga)"></td>
+                        </tr>
+                      </template>
+                      <tr x-show="!form.lines.length"><td colspan="5" class="td py-6 text-center text-zinc-500">Pilih PO yang masih memiliki sisa.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="mt-4 rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                  <p class="text-sm font-medium">Pratinjau jurnal</p>
+                  <ul class="mt-1 space-y-1 text-xs text-zinc-600">
+                    <li class="text-zinc-950 font-medium" x-show="preview.errors && preview.errors.length" x-text="preview.errors ? preview.errors[0] : ''"></li>
+                    <template x-for="(line, index) in (preview.journalLines || [])" :key="index">
+                      <li><span x-text="accName(line.accountId)"></span> | <span x-text="line.debit ? 'Debit ' + Format.rupiah(line.debit) : 'Kredit ' + Format.rupiah(line.kredit)"></span></li>
+                    </template>
+                  </ul>
+                  <p class="mt-2 text-sm font-semibold" x-text="'Total: ' + Format.rupiah(preview.total || 0)"></p>
+                </div>
+              </div>
+              <div class="overlay-footer">
+                <span class="mr-auto text-sm text-zinc-500" x-text="'Total: ' + Format.rupiah(preview.total || 0)"></span>
+                <button class="btn btn-outline" @click="requestClose()">Batal</button>
+                <button class="btn btn-outline" @click="saveDraft()">Simpan draft</button>
+                <button class="btn btn-primary" @click="saveAndPost()">Simpan &amp; posting</button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <div class="card">
+          <div class="border-b border-zinc-200 px-4 py-3"><p class="section-title">Daftar penerimaan</p></div>
+          <div class="divide-y divide-zinc-100">
+            <template x-for="receipt in receipts" :key="receipt.id">
+              <div class="px-4 py-3">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <p class="font-medium" x-text="receipt.nomor"></p>
+                      <span class="badge" :class="statusClass(receipt.status)" x-text="statusLabel(receipt.status)"></span>
+                    </div>
+                    <p class="muted mt-1" x-text="receipt.tanggal + ' · ' + poNumber(receipt.poId) + ' · ' + supplierName(receipt.supplierId) + ' · ' + Format.rupiah(receipt.total)"></p>
+                    <p class="text-[11px] text-zinc-400" x-text="receipt.suratJalan ? 'Surat jalan: ' + receipt.suratJalan : ''"></p>
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <button class="btn btn-outline btn-sm" @click="toggleDetail(receipt)" x-text="detailId === receipt.id ? 'Tutup' : 'Rincian'"></button>
+                    <button class="btn btn-primary btn-sm" x-show="receipt.status === 'draft'" @click="post(receipt)">Posting</button>
+                    <button class="btn btn-outline btn-sm" x-show="receipt.status === 'posted'" @click="$store.app.openReturn(receipt.id)">Retur</button>
+                  </div>
+                </div>
+                <div class="mt-3 overflow-x-auto" x-show="detailId === receipt.id">
+                  <table class="w-full"><thead><tr><th class="th">Barang</th><th class="th num">Qty</th><th class="th num">Harga</th><th class="th num">Subtotal</th></tr></thead>
+                    <tbody><template x-for="line in linesOf(receipt)" :key="line.id"><tr><td class="td" x-text="barangName(line.barangId)"></td><td class="td num" x-text="Format.num(line.qty)"></td><td class="td num" x-text="Format.rupiah(line.harga)"></td><td class="td num" x-text="Format.rupiah(line.qty * line.harga)"></td></tr></template></tbody>
+                  </table>
+                  <div class="mt-3 space-y-1 text-xs text-zinc-500">
+                    <p class="font-medium text-zinc-700">Riwayat</p>
+                    <template x-for="(item, index) in (receipt.riwayat || [])" :key="index">
+                      <p x-text="item.waktu.slice(0, 16).replace('T', ' ') + ' · ' + item.nama + ' · ' + item.aksi + (item.catatan ? ' — ' + item.catatan : '')"></p>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <p class="px-4 py-6 text-center text-sm text-zinc-500" x-show="!receipts.length">Belum ada penerimaan.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= RETUR PEMBELIAN ============================= -->
+    <section x-show="$store.auth.canView('returPembelian') && $store.app.page === 'returPembelian'" x-cloak x-data="returPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Retur Pembelian</h1>
+          <p class="muted mt-1">Retur dari penerimaan yang sudah diposting. Stok keluar dan utang/piutang supplier menyesuaikan.</p>
+        </div>
+        <button class="btn btn-primary" @click="openAdd()">Buat retur</button>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <template x-teleport="body">
+          <div x-show="adding" x-cloak class="fixed inset-0 z-40 flex items-stretch justify-end p-0"
+            @keydown.escape.window="adding && !$store.app.dialog.open && requestClose()">
+            <div class="overlay-backdrop" @click="requestClose()"></div>
+            <div class="overlay-panel drawer-panel" x-effect="Overlays.sync(adding, $el)" aria-labelledby="retur-modal-title">
+              <div class="overlay-header">
+                <div><p id="retur-modal-title" class="section-title">Retur baru</p><p class="muted mt-1">Stok keluar dan utang/piutang supplier menyesuaikan.</p></div>
+                <button class="btn btn-ghost btn-sm" @click="requestClose()">Tutup</button>
+              </div>
+              <div class="overlay-body">
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div><label class="label">Penerimaan</label>
+                    <select class="input" x-model="form.receiptId" @change="loadReceipt()">
+                      <option value="">Pilih penerimaan…</option>
+                      <template x-for="receipt in receipts" :key="receipt.id">
+                        <option :value="receipt.id" x-text="receipt.nomor + ' - ' + supplierName(receipt.supplierId)"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div><label class="label">Tanggal retur</label><input type="date" class="input" x-model="form.tanggal"></div>
+                  <div><label class="label">Jenis penyelesaian</label>
+                    <select class="input" x-model="form.jenis">
+                      <option value="potong_invoice">Potong invoice</option>
+                      <option value="ganti_barang">Ganti barang</option>
+                    </select>
+                  </div>
+                  <div><label class="label">Alasan</label><input class="input" x-model="form.alasan" placeholder="Wajib diisi"></div>
+                </div>
+                <div class="mt-4 overflow-x-auto rounded-md border border-zinc-200">
+                  <table class="w-full">
+                    <thead class="bg-zinc-50"><tr><th class="th">Barang</th><th class="th num">Diterima</th><th class="th num">Sudah retur</th><th class="th num">Stok</th><th class="th num">Qty retur</th><th class="th num">Harga</th><th class="th num">Subtotal</th></tr></thead>
+                    <tbody>
+                      <template x-for="(line, index) in form.lines" :key="line.receiptLineId">
+                        <tr>
+                          <td class="td" x-text="line.barangNama"></td>
+                          <td class="td num" x-text="Format.num(line.received)"></td>
+                          <td class="td num" x-text="Format.num(line.returned)"></td>
+                          <td class="td num" x-text="Format.num(line.stock)"></td>
+                          <td class="td"><input type="number" min="0" step="1" class="input num" x-model.number="line.qty"></td>
+                          <td class="td num" x-text="Format.rupiah(line.harga)"></td>
+                          <td class="td num" x-text="Format.rupiah((line.qty || 0) * line.harga)"></td>
+                        </tr>
+                      </template>
+                      <tr x-show="!form.lines.length"><td colspan="7" class="td py-6 text-center text-zinc-500">Pilih penerimaan yang memiliki sisa retur.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="mt-4 rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                  <p class="text-sm font-medium">Pratinjau jurnal retur</p>
+                  <ul class="mt-1 space-y-1 text-xs text-zinc-600">
+                    <li class="text-zinc-950 font-medium" x-show="preview.errors && preview.errors.length" x-text="preview.errors ? preview.errors[0] : ''"></li>
+                    <template x-for="(line, index) in (preview.journalLines || [])" :key="index">
+                      <li><span x-text="accName(line.accountId)"></span> | <span x-text="line.debit ? 'Debit ' + Format.rupiah(line.debit) : 'Kredit ' + Format.rupiah(line.kredit)"></span></li>
+                    </template>
+                  </ul>
+                  <p class="mt-2 text-sm font-semibold" x-text="'Total retur: ' + Format.rupiah(preview.total || 0)"></p>
+                  <p class="mt-1 text-xs text-zinc-600" x-show="form.jenis === 'potong_invoice'" x-text="'Potong utang: ' + Format.rupiah(preview.potongAP || 0) + ' | Piutang Supplier: ' + Format.rupiah(preview.piutangSupplier || 0)"></p>
+                  <p class="mt-1 text-xs text-zinc-600" x-show="form.jenis === 'ganti_barang'" x-text="'Nilai klaim penggantian ke supplier: ' + Format.rupiah(preview.piutangSupplier || 0)"></p>
+                </div>
+              </div>
+              <div class="overlay-footer">
+                <span class="mr-auto text-sm text-zinc-500" x-text="'Total: ' + Format.rupiah(preview.total || 0)"></span>
+                <button class="btn btn-outline" @click="requestClose()">Batal</button>
+                <button class="btn btn-primary" @click="saveDraft()">Simpan draft</button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <div class="card">
+          <div class="flex flex-col gap-2 border-b border-zinc-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p class="section-title whitespace-nowrap">Daftar retur</p>
+            <select class="input" x-model="filter">
+              <option value="">Semua status</option>
+              <option value="draft">Draft</option>
+              <option value="confirmed">Dikonfirmasi</option>
+            </select>
+          </div>
+          <div class="divide-y divide-zinc-100">
+            <template x-for="retur in returns" :key="retur.id">
+              <div class="px-4 py-3">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <p class="font-medium" x-text="retur.nomor"></p>
+                      <span class="badge" :class="statusClass(retur.status)" x-text="statusLabel(retur.status)"></span>
+                      <span class="badge badge-outline" x-text="jenisLabel(retur.jenis)"></span>
+                      <span class="badge badge-outline" x-show="retur.replacementStatus" x-text="replacementStatusLabel(retur.replacementStatus)"></span>
+                    </div>
+                    <p class="muted mt-1" x-text="retur.tanggal + ' · ' + receiptNumber(retur.receiptId) + ' · ' + supplierName(retur.supplierId) + ' · ' + Format.rupiah(retur.total)"></p>
+                    <p class="text-xs text-zinc-500" x-text="'Alasan: ' + retur.alasan"></p>
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <button class="btn btn-outline btn-sm" @click="toggleDetail(retur)" x-text="detailId === retur.id ? 'Tutup' : 'Rincian'"></button>
+                    <button class="btn btn-primary btn-sm" x-show="retur.status === 'draft'" @click="confirm(retur)">Konfirmasi</button>
+                    <button class="btn btn-primary btn-sm" x-show="retur.status === 'confirmed' && retur.jenis === 'ganti_barang' && retur.replacementStatus !== 'selesai'" @click="openReplacement(retur)">Terima pengganti</button>
+                  </div>
+                </div>
+                <div class="mt-3 overflow-x-auto" x-show="detailId === retur.id">
+                  <table class="w-full">
+                    <thead><tr><th class="th">Barang</th><th class="th num">Qty retur</th><th class="th num">Sudah diganti</th><th class="th num">Harga</th><th class="th num">Subtotal</th></tr></thead>
+                    <tbody>
+                      <template x-for="line in detailLines" :key="line.id">
+                        <tr><td class="td" x-text="barangName(line.barangId)"></td><td class="td num" x-text="Format.num(line.qty)"></td><td class="td num" x-text="Format.num(line.qtyDiganti)"></td><td class="td num" x-text="Format.rupiah(line.harga)"></td><td class="td num" x-text="Format.rupiah(line.subtotal)"></td></tr>
+                      </template>
+                    </tbody>
+                  </table>
+                  <div class="mt-3 space-y-1 text-xs text-zinc-500">
+                    <p class="font-medium text-zinc-700">Riwayat</p>
+                    <template x-for="(item, index) in (retur.riwayat || [])" :key="index">
+                      <p x-text="item.waktu.slice(0, 16).replace('T', ' ') + ' · ' + item.nama + ' · ' + item.aksi + (item.catatan ? ' — ' + item.catatan : '')"></p>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <p class="px-4 py-6 text-center text-sm text-zinc-500" x-show="!returns.length">Belum ada retur pembelian.</p>
+          </div>
+        </div>
+
+        <template x-teleport="body">
+          <div x-show="replacement.returnId" x-cloak class="fixed inset-0 z-40 flex items-stretch justify-end p-0"
+            @keydown.escape.window="replacement.returnId && !$store.app.dialog.open && requestCloseReplacement()">
+            <div class="overlay-backdrop" @click="requestCloseReplacement()"></div>
+            <div class="overlay-panel drawer-panel" x-effect="Overlays.sync(!!replacement.returnId, $el)" aria-labelledby="replacement-modal-title">
+              <div class="overlay-header">
+                <div>
+                  <p id="replacement-modal-title" class="section-title">Penerimaan barang pengganti</p>
+                  <p class="muted mt-1" x-text="detail ? 'Retur ' + detail.nomor + ' - ' + supplierName(detail.supplierId) : ''"></p>
+                </div>
+                <button class="btn btn-ghost btn-sm" @click="requestCloseReplacement()">Tutup</button>
+              </div>
+              <div class="overlay-body">
+                <div class="grid gap-3 sm:grid-cols-3">
+                  <div><label class="label">Tanggal</label><input type="date" class="input" x-model="replacement.tanggal"></div>
+                  <div><label class="label">Gudang</label>
+                    <select class="input" x-model="replacement.gudangId">
+                      <template x-for="gudang in gudangs" :key="gudang.id"><option :value="gudang.id" x-text="gudang.nama"></option></template>
+                    </select>
+                  </div>
+                  <div><label class="label">Surat jalan</label><input class="input" x-model="replacement.suratJalan" placeholder="Opsional"></div>
+                </div>
+                <div class="mt-4 overflow-x-auto rounded-md border border-zinc-200">
+                  <table class="w-full">
+                    <thead class="bg-zinc-50"><tr><th class="th">Barang</th><th class="th num">Sisa retur</th><th class="th num">Qty pengganti</th><th class="th num">Harga</th></tr></thead>
+                    <tbody>
+                      <template x-for="(line, index) in replacement.lines" :key="line.returnLineId">
+                        <tr>
+                          <td class="td" x-text="line.barangNama"></td>
+                          <td class="td num" x-text="Format.num(line.remaining)"></td>
+                          <td class="td"><input type="number" min="0" step="1" class="input num" x-model.number="line.qty"></td>
+                          <td class="td num" x-text="Format.rupiah(line.harga)"></td>
+                        </tr>
+                      </template>
+                      <tr x-show="!replacement.lines.length"><td colspan="4" class="td py-6 text-center text-zinc-500">Tidak ada sisa barang pengganti.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="overlay-footer">
+                <button class="btn btn-outline" @click="requestCloseReplacement()">Batal</button>
+                <button class="btn btn-primary" @click="postReplacement()">Posting penerimaan pengganti</button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </section>
+
+    <!-- ============================= STOK ============================= -->
+    <section x-show="$store.auth.canView('stok') && $store.app.page === 'stok'" x-cloak x-data="stockPage()" class="pb-16">
+      <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div>
+          <h1 class="page-title">Stok</h1>
+          <p class="muted mt-1">Posisi stok dihitung dari pergerakan stok. Kartu stok dan opname masuk fase P6.</p>
+        </div>
+        <span class="badge badge-outline" x-text="'Nilai persediaan ' + Format.rupiah(totalNilai)"></span>
+      </header>
+
+      <div class="space-y-5 px-4 py-6 sm:px-8">
+        <div class="card">
+          <div class="border-b border-zinc-200 px-4 py-3"><p class="section-title">Posisi stok</p></div>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead><tr><th class="th">Kode</th><th class="th">Barang</th><th class="th">Kategori</th><th class="th num">Qty</th><th class="th num">Nilai</th><th class="th num">Rata-rata</th><th class="th">Status</th></tr></thead>
+              <tbody>
+                <template x-for="row in rows" :key="row.barang.id">
+                  <tr>
+                    <td class="td font-mono text-xs" x-text="row.barang.kode"></td>
+                    <td class="td" x-text="row.barang.nama"></td>
+                    <td class="td" x-text="kategoriName(row)"></td>
+                    <td class="td num" x-text="Format.num(row.qty) + ' ' + satuanName(row)"></td>
+                    <td class="td num" x-text="Format.rupiah(row.nilai)"></td>
+                    <td class="td num" x-text="Format.rupiah(row.rataRata)"></td>
+                    <td class="td"><span class="badge" :class="row.diBawahMinimum ? 'badge-outline' : 'badge-solid'" x-text="row.diBawahMinimum ? 'Di bawah minimum' : 'Aman'"></span></td>
+                  </tr>
+                </template>
+                <tr x-show="!rows.length"><td colspan="7" class="td py-6 text-center text-zinc-500">Belum ada barang.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card card-pad">
+          <p class="section-title">Stok vs Buku Besar</p>
+          <p class="muted mt-1">Nilai stok dari pergerakan barang dibandingkan dengan saldo akun Persediaan.</p>
+          <div class="mt-3 grid gap-3 sm:grid-cols-2">
+            <div class="rounded-md border border-zinc-200 p-3">
+              <p class="eyebrow">Persediaan</p>
+              <p class="mt-1 text-sm">Stok: <span class="font-medium" x-text="Format.rupiah(reconcile.stok.nilaiStok)"></span></p>
+              <p class="text-sm">Buku Besar: <span class="font-medium" x-text="Format.rupiah(reconcile.stok.saldoBuku)"></span></p>
+              <p class="mt-1 text-sm">Selisih: <span class="font-semibold" x-text="Format.rupiah(reconcile.stok.selisih)"></span></p>
+            </div>
+            <div class="rounded-md border border-zinc-200 p-3">
+              <p class="eyebrow">Utang Usaha</p>
+              <p class="mt-1 text-sm">Tagihan: <span class="font-medium" x-text="Format.rupiah(reconcile.utang.nilaiTagihan)"></span></p>
+              <p class="text-sm">Buku Besar: <span class="font-medium" x-text="Format.rupiah(reconcile.utang.saldoBuku)"></span></p>
+              <p class="mt-1 text-sm">Selisih: <span class="font-semibold" x-text="Format.rupiah(reconcile.utang.selisih)"></span></p>
+            </div>
+          </div>
+          <p class="mt-2 text-xs text-zinc-500" x-show="reconcile.legacy">Skenario akuntansi legacy tidak memakai subledger stok, sehingga selisih dapat muncul. Muat skenario purchasing untuk uji rekonsiliasi.</p>
+          <p class="mt-2 text-xs" :class="reconcile.ok ? 'text-zinc-500' : 'text-zinc-950 font-medium'" x-text="reconcile.ok ? 'Rekonsiliasi seimbang.' : 'Ada selisih yang perlu diperiksa.'"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= AKSES DITOLAK ============================= -->
+    <section x-show="$store.app.page === 'denied'" x-cloak class="pb-16">
+      <header class="no-print border-b border-zinc-200 bg-white px-4 py-5 sm:px-8">
+        <h1 class="page-title">Akses ditolak</h1>
+        <p class="muted mt-1">Role aktif tidak memiliki akses ke halaman ini.</p>
+      </header>
+      <div class="px-4 py-6 sm:px-8">
+        <div class="card card-pad">
+          <p class="text-sm text-zinc-600">Ganti role di menu kiri atau kembali ke Dashboard.</p>
+          <button class="btn btn-primary mt-3" @click="$store.app.go('dashboard')">Kembali ke Dashboard</button>
+        </div>
+      </div>
+    </section>
+
     <!-- ============================= INFORMASI ============================= -->
     <section x-show="$store.app.page === 'informasi'" x-cloak class="pb-16">
       <header class="no-print flex flex-col gap-3 border-b border-zinc-200 bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <div>
           <h1 class="page-title">Informasi</h1>
-          <p class="muted mt-1">Dasar-dasar akuntansi untuk orang awam: dari debit dan kredit sampai laporan.</p>
+          <p class="muted mt-1" x-text="$store.auth.role === 'finance' ? 'Dasar-dasar akuntansi untuk orang awam: dari debit dan kredit sampai laporan.' : 'Alur purchasing dari PR, PO, penerimaan, retur, sampai stok dan utang.'"></p>
         </div>
         <div class="flex flex-wrap gap-2">
-          <button class="btn btn-outline" @click="$store.app.go('jurnal')">Buka Jurnal</button>
-          <button class="btn btn-primary" @click="$store.app.requestRestartScenario()">Ulangi skenario</button>
+          <button class="btn btn-outline" x-show="$store.auth.role === 'finance'" @click="$store.app.go('jurnal')">Buka Jurnal</button>
+          <button class="btn btn-primary" x-show="$store.auth.role === 'finance'" @click="$store.app.requestRestartScenario()">Ulangi skenario</button>
+          <button class="btn btn-outline" x-show="$store.auth.role === 'logistik'" @click="$store.app.go('purchaseRequest')">Buat PR</button>
+          <button class="btn btn-primary" x-show="$store.auth.role === 'logistik'" @click="$store.app.requestLoadPurchasingScenario()">Muat skenario purchasing</button>
         </div>
       </header>
 
       <div class="px-4 py-6 sm:px-8">
-        <div class="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <div class="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]" x-show="$store.auth.role === 'finance'">
           <aside class="no-print hidden lg:block">
             <div class="card card-pad sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto">
               <p class="eyebrow">Daftar isi</p>
@@ -2053,13 +3002,298 @@
                     <li>Mengapa Laba Rugi hanya terpengaruh transaksi 4, 5, 6, dan 7, padahal semua transaksi tercatat di jurnal?</li>
                   </ul>
                 </div>
-                <div class="flex flex-wrap gap-2 pt-1">
+                <div class="flex flex-wrap gap-2 pt-1" x-show="$store.auth.role === 'finance'">
                   <button class="btn btn-primary btn-sm" @click="$store.app.requestRestartScenario()">Ulangi skenario</button>
                   <button class="btn btn-outline btn-sm" @click="$store.app.go('jurnal')">Jurnal Umum</button>
                   <button class="btn btn-outline btn-sm" @click="$store.app.go('bukuBesar')">Buku Besar</button>
                   <button class="btn btn-outline btn-sm" @click="$store.app.go('laporan')">Laporan</button>
                 </div>
                 <p class="border-t border-zinc-200 pt-3 text-xs text-zinc-400">Prototype ini sengaja belum memuat pajak, penyusutan, penutupan periode, multi-user, dan rekonsiliasi bank. Fokusnya memahami alur dasar jurnal sampai laporan.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]" x-show="$store.auth.role === 'logistik'">
+          <aside class="no-print hidden lg:block">
+            <div class="card card-pad sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto">
+              <p class="eyebrow">Panduan Logistik</p>
+              <nav class="mt-3 space-y-0.5 text-xs">
+                <a href="#info-purchasing-alur" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">1. Alur purchasing</a>
+                <a href="#info-purchasing-pr" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">2. Purchase Request</a>
+                <a href="#info-purchasing-po" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">3. Purchase Order</a>
+                <a href="#info-purchasing-approval" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">4. Approval</a>
+                <a href="#info-purchasing-terima" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">5. Penerimaan</a>
+                <a href="#info-purchasing-short" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">6. Barang kurang</a>
+                <a href="#info-purchasing-retur" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">7. Retur potong invoice</a>
+                <a href="#info-purchasing-lunas" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">8. Piutang Supplier</a>
+                <a href="#info-purchasing-ganti" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">9. Ganti barang</a>
+                <a href="#info-purchasing-stok" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">10. Stok</a>
+                <a href="#info-purchasing-rekonsiliasi" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">11. Rekonsiliasi</a>
+                <a href="#info-purchasing-role" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">12. Peran role</a>
+                <a href="#info-purchasing-kesalahan" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">13. Kesalahan umum</a>
+                <a href="#info-purchasing-latihan" class="block rounded-md px-2 py-1 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950">14. Latihan</a>
+              </nav>
+              <div class="mt-4 space-y-2 border-t border-zinc-200 pt-3">
+                <button class="btn btn-primary btn-sm w-full" @click="$store.app.go('purchaseRequest')">Buat PR</button>
+                <button class="btn btn-outline btn-sm w-full" @click="$store.app.go('penerimaan')">Penerimaan Barang</button>
+                <button class="btn btn-outline btn-sm w-full" @click="$store.app.go('returPembelian')">Retur Pembelian</button>
+              </div>
+            </div>
+          </aside>
+
+          <div class="max-w-3xl space-y-5">
+            <article id="info-purchasing-alur" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">1 - Alur purchasing</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">PR -> PO -> Penerimaan -> Utang -> Pembayaran</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Purchasing dimulai dari kebutuhan internal, bukan dari utang. Logistik membuat <strong class="text-zinc-950">Purchase Request (PR)</strong>, lalu PO, lalu menerima barang. Utang baru muncul saat barang diterima.</p>
+                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs leading-relaxed text-zinc-700">
+                  PR dibuat Logistik -> disetujui Finance<br>
+                  PO dibuat Logistik -> disetujui Finance<br>
+                  Barang datang -> Penerimaan diposting<br>
+                  Stok bertambah + tagihan utang dibuat<br>
+                  Finance membayar utang
+                </div>
+                <div class="rounded-md border border-zinc-200 p-3">
+                  <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Prinsip utama</p>
+                  <p class="mt-1"><strong class="text-zinc-950">PO adalah komitmen, bukan utang.</strong> Jurnal dan utang hanya dibuat saat Penerimaan Barang diposting.</p>
+                </div>
+              </div>
+            </article>
+
+            <article id="info-purchasing-pr" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">2 - Purchase Request</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Permintaan internal sebelum menghubungi supplier</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>PR berisi barang dan qty yang dibutuhkan. PR belum mengikat supplier dan belum mengubah stok, utang, atau laporan.</p>
+                <table class="w-full">
+                  <thead><tr><th class="th">Status</th><th class="th">Arti</th></tr></thead>
+                  <tbody>
+                    <tr><td class="td font-medium">Draft</td><td class="td">Masih disusun Logistik</td></tr>
+                    <tr><td class="td font-medium">Diajukan</td><td class="td">Menunggu keputusan Finance</td></tr>
+                    <tr><td class="td font-medium">Disetujui</td><td class="td">Boleh dibuatkan PO</td></tr>
+                    <tr><td class="td font-medium">Ditolak</td><td class="td">Tidak boleh diproses; alasan wajib dicatat</td></tr>
+                    <tr><td class="td font-medium">Diproses</td><td class="td">Sebagian atau seluruh qty sudah dipesan</td></tr>
+                    <tr><td class="td font-medium">Selesai</td><td class="td">Seluruh qty sudah masuk PO</td></tr>
+                  </tbody>
+                </table>
+                <p><strong class="text-zinc-950">Tidak ada jurnal pada PR.</strong> PR hanya dokumen permintaan.</p>
+              </div>
+            </article>
+
+            <article id="info-purchasing-po" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">3 - Purchase Order</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Pesanan resmi ke supplier yang masih berupa komitmen</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>PO dibuat dari PR yang disetujui atau manual. Harga diambil dari harga supplier terbaru; jika tidak ada, memakai harga beli standar barang.</p>
+                <ul class="list-disc space-y-1 pl-5">
+                  <li>Qty PO tidak boleh melebihi sisa qty PR.</li>
+                  <li>Harga boleh diubah sebelum PO disetujui.</li>
+                  <li>PO di atas ambang harus disetujui Finance.</li>
+                  <li><strong class="text-zinc-950">PO tidak membuat jurnal dan tidak membuat utang.</strong></li>
+                </ul>
+                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                  <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Contoh</p>
+                  <p class="mt-1">Semen 100 sak x Rp 65.000 + Cat 20 kaleng x Rp 150.000 = <strong class="text-zinc-950">Rp 9.500.000</strong>. Angka ini tampil sebagai komitmen pembelian, bukan utang.</p>
+                </div>
+              </div>
+            </article>
+
+            <article id="info-purchasing-approval" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">4 - Approval</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Logistik mengusulkan, Finance menyetujui</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Pemisahan tugas mencegah satu role membuat dan menyetujui dokumen yang sama.</p>
+                <table class="w-full">
+                  <thead><tr><th class="th">Dokumen</th><th class="th">Dibuat</th><th class="th">Disetujui</th></tr></thead>
+                  <tbody>
+                    <tr><td class="td">PR</td><td class="td">Logistik</td><td class="td">Finance</td></tr>
+                    <tr><td class="td">PO</td><td class="td">Logistik</td><td class="td">Finance jika di atas ambang</td></tr>
+                    <tr><td class="td">Penerimaan</td><td class="td">Logistik</td><td class="td">Langsung diposting Logistik</td></tr>
+                    <tr><td class="td">Retur</td><td class="td">Logistik</td><td class="td">Dikonfirmasi Logistik</td></tr>
+                  </tbody>
+                </table>
+                <p>Ambang persetujuan PO dapat diubah Finance di halaman Persetujuan. Default: <strong class="text-zinc-950">Rp 5.000.000</strong>.</p>
+              </div>
+            </article>
+
+            <article id="info-purchasing-terima" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">5 - Penerimaan Barang</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Di sinilah stok dan utang benar-benar lahir</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Penerimaan harus merujuk PO yang sudah disetujui atau dikirim. Qty boleh sebagian. Setelah diposting:</p>
+                <ul class="list-disc space-y-1 pl-5">
+                  <li>stock movement masuk dibuat,</li>
+                  <li>stok bertambah,</li>
+                  <li>tagihan utang dibuat,</li>
+                  <li>jurnal otomatis diposting.</li>
+                </ul>
+                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs leading-relaxed text-zinc-700">
+                  Dr Persediaan Barang (1-1300) ... total diterima<br>
+                  Cr Utang Usaha (2-1100) ......... total diterima
+                </div>
+                <p>Jatuh tempo tagihan = tanggal penerimaan + termin bayar supplier. Contoh: terima Semen 60 sak dan Cat 20 kaleng = <strong class="text-zinc-950">Rp 6.900.000</strong>.</p>
+                <p>Penerimaan kedua untuk sisa Semen 40 sak membuat total utang menjadi <strong class="text-zinc-950">Rp 9.500.000</strong>.</p>
+              </div>
+            </article>
+
+            <article id="info-purchasing-short" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">6 - Barang kurang</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Bedakan kurang kirim dengan barang rusak</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <table class="w-full">
+                  <thead><tr><th class="th">Masalah</th><th class="th">Tindakan</th></tr></thead>
+                  <tbody>
+                    <tr><td class="td">Qty datang kurang</td><td class="td">Terima qty yang sesuai saja. PO tetap Diterima Sebagian. Tidak ada retur.</td></tr>
+                    <tr><td class="td">Sisa tidak akan dikirim</td><td class="td">Tutup PO. Sisa qty dilepas dari PR.</td></tr>
+                    <tr><td class="td">Rusak / salah mutu</td><td class="td">Terima dulu, lalu buat Retur Pembelian.</td></tr>
+                    <tr><td class="td">Salah barang / salah spesifikasi</td><td class="td">Terima dulu, lalu retur potong invoice atau ganti barang.</td></tr>
+                  </tbody>
+                </table>
+                <p>Short receipt adalah cara terbaik saat masalahnya hanya kekurangan qty. Retur dipakai saat barang sudah tercatat masuk.</p>
+              </div>
+            </article>
+
+            <article id="info-purchasing-retur" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">7 - Retur potong invoice</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Mengurangi utang tanpa mengeluarkan uang</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Retur dibuat dari Penerimaan yang sudah diposting. Qty retur tidak boleh melebihi <strong class="text-zinc-950">diterima - sudah diretur</strong> dan tidak boleh melebihi stok saat ini. Alasan wajib diisi.</p>
+                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs leading-relaxed text-zinc-700">
+                  Dr Utang Usaha (2-1100) ......... nilai retur<br>
+                  Cr Persediaan Barang (1-1300) ... nilai retur
+                </div>
+                <p>Contoh: retur 5 kaleng Cat x Rp 150.000 = Rp 750.000. Stok Cat turun dari 20 menjadi 15, utang turun dari Rp 9.500.000 menjadi Rp 8.750.000.</p>
+                <p>Retur mengurangi nilai persediaan dan utang, bukan beban. Tidak ada kas yang keluar.</p>
+              </div>
+            </article>
+
+            <article id="info-purchasing-lunas" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">8 - Retur setelah lunas</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Jika tagihan sudah dibayar, muncul Piutang Supplier</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Saat retur dikonfirmasi, sistem memotong sisa utang terlebih dahulu. Jika tagihan sudah lunas, seluruh nilai retur menjadi <strong class="text-zinc-950">Piutang Supplier</strong>.</p>
+                <table class="w-full">
+                  <thead><tr><th class="th">Kondisi tagihan</th><th class="th">Jurnal</th></tr></thead>
+                  <tbody>
+                    <tr><td class="td">Belum dibayar</td><td class="td">Dr Utang Usaha / Cr Persediaan</td></tr>
+                    <tr><td class="td">Dibayar sebagian</td><td class="td">Dr Utang Usaha (sisa) + Dr Piutang Supplier (kelebihan) / Cr Persediaan</td></tr>
+                    <tr><td class="td">Sudah lunas</td><td class="td">Dr Piutang Supplier 1-1500 / Cr Persediaan</td></tr>
+                  </tbody>
+                </table>
+                <p>Piutang Supplier tampil di Dashboard Finance dan halaman Utang. Penyelesaiannya bisa refund tunai, dipotong tagihan berikutnya, atau diganti barang.</p>
+              </div>
+            </article>
+
+            <article id="info-purchasing-ganti" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">9 - Ganti barang</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Stok keluar dulu, lalu masuk lagi sebagai barang pengganti</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Pilih jenis <strong class="text-zinc-950">Ganti barang</strong> saat supplier akan mengirim barang baru, bukan mengembalikan uang. Utang tidak berubah.</p>
+                <div class="rounded-md border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs leading-relaxed text-zinc-700">
+                  Saat retur dikonfirmasi:<br>
+                  Dr Piutang Supplier (1-1500) ... nilai retur<br>
+                  Cr Persediaan Barang (1-1300) . nilai retur<br><br>
+                  Saat barang pengganti diterima:<br>
+                  Dr Persediaan Barang (1-1300) . nilai pengganti<br>
+                  Cr Piutang Supplier (1-1500) .. nilai pengganti
+                </div>
+                <p>Setelah penerimaan pengganti, stok kembali dan Piutang Supplier kembali nol. Tidak ada tagihan utang baru untuk barang pengganti.</p>
+              </div>
+            </article>
+
+            <article id="info-purchasing-stok" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">10 - Stok</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Stok dihitung dari pergerakan, bukan diketik manual</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <table class="w-full">
+                  <thead><tr><th class="th">Kejadian</th><th class="th">Qty</th><th class="th">Nilai</th></tr></thead>
+                  <tbody>
+                    <tr><td class="td">Penerimaan</td><td class="td">+ qty diterima</td><td class="td">+ qty x harga PO</td></tr>
+                    <tr><td class="td">Retur</td><td class="td">- qty retur</td><td class="td">- qty x harga baris penerimaan</td></tr>
+                    <tr><td class="td">Penerimaan pengganti</td><td class="td">+ qty pengganti</td><td class="td">+ qty x harga retur</td></tr>
+                  </tbody>
+                </table>
+                <p>Harga rata-rata = nilai persediaan / qty stok. Halaman Stok menampilkan qty, nilai, rata-rata, dan peringatan stok minimum.</p>
+                <p>Persediaan dan Utang Usaha tidak boleh diubah lewat Jurnal Umum. Perubahannya hanya lewat modul purchasing.</p>
+              </div>
+            </article>
+
+            <article id="info-purchasing-rekonsiliasi" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">11 - Rekonsiliasi</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Stok harus sama dengan Buku Besar</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <p>Dua pemeriksaan di Dashboard dan halaman Stok:</p>
+                <ul class="list-disc space-y-1 pl-5">
+                  <li>nilai stok dari pergerakan barang vs saldo akun <strong class="text-zinc-950">1-1300</strong>;</li>
+                  <li>sisa tagihan supplier vs saldo akun <strong class="text-zinc-950">2-1100</strong>.</li>
+                </ul>
+                <p>Keduanya harus selisih <strong class="text-zinc-950">0</strong>. Jika tidak, periksa dokumen penerimaan, retur, atau jurnal yang tidak seimbang.</p>
+                <p>Piutang Supplier juga ditampilkan agar nilai retur yang belum diselesaikan supplier tidak terlupakan.</p>
+              </div>
+            </article>
+
+            <article id="info-purchasing-role" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">12 - Peran role</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Finance dan Logistik saling melengkapi</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <table class="w-full">
+                  <thead><tr><th class="th">Aktivitas</th><th class="th">Finance</th><th class="th">Logistik</th></tr></thead>
+                  <tbody>
+                    <tr><td class="td">Buat PR</td><td class="td">-</td><td class="td">Ya</td></tr>
+                    <tr><td class="td">Setujui PR / PO</td><td class="td">Ya</td><td class="td">-</td></tr>
+                    <tr><td class="td">Buat PO</td><td class="td">-</td><td class="td">Ya</td></tr>
+                    <tr><td class="td">Terima barang</td><td class="td">-</td><td class="td">Ya</td></tr>
+                    <tr><td class="td">Retur / ganti barang</td><td class="td">-</td><td class="td">Ya</td></tr>
+                    <tr><td class="td">Bayar utang</td><td class="td">Ya</td><td class="td">-</td></tr>
+                    <tr><td class="td">Stok</td><td class="td">-</td><td class="td">Ya</td></tr>
+                    <tr><td class="td">Laporan keuangan</td><td class="td">Ya</td><td class="td">-</td></tr>
+                  </tbody>
+                </table>
+                <p>Role switch hanya pembatas tampilan pada prototype ini, bukan login atau sistem keamanan.</p>
+              </div>
+            </article>
+
+            <article id="info-purchasing-kesalahan" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">13 - Kesalahan umum</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Hal yang sering membuat stok dan utang tidak sinkron</h2>
+              <div class="mt-3 text-sm leading-relaxed text-zinc-600">
+                <ul class="list-disc space-y-2 pl-5">
+                  <li>Menganggap PO langsung menjadi utang. Utang baru muncul saat penerimaan.</li>
+                  <li>Membuat tagihan utang manual, padahal seharusnya dari Penerimaan Barang.</li>
+                  <li>Menerima barang sebelum PO disetujui.</li>
+                  <li>Meretur lebih banyak dari qty yang diterima.</li>
+                  <li>Meretur barang yang stoknya sudah habis atau terjual.</li>
+                  <li>Retur setelah lunas tetapi tidak mencatat Piutang Supplier.</li>
+                  <li>Mengubah Persediaan atau Utang lewat jurnal manual.</li>
+                  <li>Membuat PO tanpa harga supplier sehingga total dan ambang approval salah.</li>
+                </ul>
+              </div>
+            </article>
+
+            <article id="info-purchasing-latihan" class="card card-pad scroll-mt-6">
+              <p class="eyebrow">14 - Latihan</p>
+              <h2 class="mt-1 text-lg font-semibold tracking-tight">Jalankan satu siklus purchasing dari awal</h2>
+              <div class="mt-3 space-y-3 text-sm leading-relaxed text-zinc-600">
+                <ol class="list-decimal space-y-1 pl-5">
+                  <li>Muat skenario purchasing.</li>
+                  <li>Buat PR Semen 100 sak dan Cat 20 kaleng, lalu ajukan.</li>
+                  <li>Setujui PR sebagai Finance.</li>
+                  <li>Buat PO dan setujui.</li>
+                  <li>Posting penerimaan sebagian.</li>
+                  <li>Retur 5 kaleng Cat dengan potong invoice.</li>
+                  <li>Cek Stok, Utang, Dashboard, dan Buku Besar.</li>
+                  <li>Ulangi dengan retur ganti barang dan penerimaan pengganti.</li>
+                  <li>Jalankan uji regresi.</li>
+                </ol>
+                <div class="flex flex-wrap gap-2 border-t border-zinc-200 pt-3">
+                  <button class="btn btn-primary btn-sm" @click="$store.app.requestLoadPurchasingScenario()">Muat skenario purchasing</button>
+                  <button class="btn btn-outline btn-sm" @click="$store.app.go('purchaseRequest')">Purchase Request</button>
+                  <button class="btn btn-outline btn-sm" @click="$store.app.go('penerimaan')">Penerimaan</button>
+                  <button class="btn btn-outline btn-sm" @click="$store.app.go('returPembelian')">Retur</button>
+                  <button class="btn btn-outline btn-sm" @click="$store.app.go('stok')">Stok</button>
+                </div>
               </div>
             </article>
           </div>
@@ -2086,10 +3320,12 @@
   x-text="$store.tooltip.text"></div>
 
 <!-- dialog -->
-<div x-cloak x-show="$store.app.dialog.open" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+<div x-cloak x-show="$store.app.dialog.open" class="fixed inset-0 z-50 flex items-center justify-center p-4"
+  @keydown.escape.window="$store.app.dialog.open && $store.app.closeDialog()">
   <div class="absolute inset-0 bg-zinc-950/40" @click="$store.app.closeDialog()"></div>
-  <div class="relative w-full max-w-md rounded-md border border-zinc-200 bg-white p-5 shadow-xl">
-    <h3 class="text-base font-semibold text-zinc-950" x-text="$store.app.dialog.title"></h3>
+  <div class="relative w-full max-w-md rounded-md border border-zinc-200 bg-white p-5 shadow-xl"
+    x-effect="Overlays.sync($store.app.dialog.open, $el)" aria-labelledby="confirm-dialog-title">
+    <h3 id="confirm-dialog-title" class="text-base font-semibold text-zinc-950" x-text="$store.app.dialog.title"></h3>
     <p class="mt-2 text-sm leading-relaxed text-zinc-500" x-text="$store.app.dialog.message"></p>
     <template x-if="$store.app.dialog.details.length">
       <ul class="mt-3 max-h-64 space-y-1 overflow-y-auto rounded-md border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600">
@@ -2105,14 +3341,27 @@
   </div>
 </div>
 
-<script src="js/format.js"></script>
-<script src="js/glosarium.js"></script>
-<script src="js/store.js"></script>
-<script src="js/ledger.js"></script>
-<script src="js/report.js"></script>
-<script src="js/seed.js"></script>
-<script src="js/app.js"></script>
-<script src="js/selftest.js"></script>
+<script src="js/format.js" charset="utf-8"></script>
+<script src="js/glosarium.js" charset="utf-8"></script>
+<script src="js/store.js" charset="utf-8"></script>
+<script src="js/ledger.js" charset="utf-8"></script>
+<script src="js/report.js" charset="utf-8"></script>
+<script src="js/roles.js" charset="utf-8"></script>
+<script src="js/auth.js" charset="utf-8"></script>
+<script src="js/numbering.js" charset="utf-8"></script>
+<script src="js/master.js" charset="utf-8"></script>
+<script src="js/inventory.js" charset="utf-8"></script>
+<script src="js/purchasing.js" charset="utf-8"></script>
+<script src="js/receiving.js" charset="utf-8"></script>
+<script src="js/returns.js" charset="utf-8"></script>
+<script src="js/reconcile.js" charset="utf-8"></script>
+<script src="js/seed.js" charset="utf-8"></script>
+<script src="js/seed-purchasing.js" charset="utf-8"></script>
+<script src="js/overlays.js" charset="utf-8"></script>
+<script src="js/pages-purchasing.js" charset="utf-8"></script>
+<script src="js/app.js" charset="utf-8"></script>
+<script src="js/selftest.js" charset="utf-8"></script>
+<script src="js/selftest-purchasing.js" charset="utf-8"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </body>
 </html>
