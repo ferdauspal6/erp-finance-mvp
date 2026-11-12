@@ -837,6 +837,9 @@
 
     Alpine.data('dashboardPage', function () {
       return {
+        chartMode: 'harian',
+        chartError: false,
+        chartErrorDetail: '',
         get db() { return this.$store.app.db; },
         get per() { return Report.referensiTanggal(this.db); },
         get kas() {
@@ -860,6 +863,66 @@
         },
         get reconcile() { return Reconcile.ringkasan(this.db); },
         get piutangSupplier() { return Returns.piutangSupplierBalance(this.db); },
+        get series() { return Report.timeSeries(this.db, this.chartMode); },
+        get chartSubtitle() {
+          var series = this.series;
+          if (!series.points.length) return 'Belum ada jurnal.';
+          if (series.totalPendapatan === 0 && series.totalBeban === 0) return 'Belum ada pendapatan atau beban pada periode ini.';
+          return 'Periode ' + series.points[0].label + ' - ' + series.points[series.points.length - 1].label + ' - ' + (series.mode === 'harian' ? 'Harian' : 'Bulanan');
+        },
+        get chartEmpty() {
+          var series = this.series;
+          return !series.points.length || (series.totalPendapatan === 0 && series.totalBeban === 0);
+        },
+        initChart: function () {
+          var self = this;
+          this.$nextTick(function () {
+            self.syncChart(self.dataVersion, self.jumlahJurnal, self.chartMode, self.role, self.$store.app.page);
+          });
+        },
+        destroyChart: function () {
+          var element = this.$refs.chart;
+          if (element && element.__apexChart) {
+            try { element.__apexChart.destroy(); } catch (e) {}
+            element.__apexChart = null;
+          }
+          if (element) element.__chartSignature = '';
+        },
+        syncChart: function (dataVersion, jumlahJurnal, mode, role, page) {
+          try {
+            if (role !== 'finance' || page !== 'dashboard') {
+              this.destroyChart();
+              return;
+            }
+            if (!global.ApexCharts || !global.Chart) {
+              this.chartError = true;
+              this.chartErrorDetail = 'ApexCharts belum tersedia.';
+              this.destroyChart();
+              return;
+            }
+            this.chartError = false;
+            this.chartErrorDetail = '';
+            if (this.chartEmpty) {
+              this.destroyChart();
+              return;
+            }
+            var element = this.$refs.chart;
+            if (!element) return;
+            var series = this.series;
+            var signature = [this.chartMode, dataVersion, jumlahJurnal, series.totalPendapatan, series.totalBeban, series.points.length].join('|');
+            if (element.__chartSignature === signature && element.__apexChart) return;
+            this.destroyChart();
+            var chartOptions = global.Chart.options(series, this.chartMode);
+            var chart = new global.ApexCharts(element, chartOptions);
+            element.__apexChart = chart;
+            element.__chartSignature = signature;
+            chart.render();
+          } catch (error) {
+            this.chartError = true;
+            this.chartErrorDetail = error && error.message ? error.message : String(error);
+            this.destroyChart();
+          }
+        },
         totalOf: function (journal) {
           return this.db.journalLines.filter(function (line) { return line.journalId === journal.id; })
             .reduce(function (sum, line) { return sum + line.debit; }, 0);
@@ -1298,6 +1361,11 @@
         paymentsOf: function (invoiceId) { return this.$store.app.paymentsOf(invoiceId); },
         remove: function (invoice) { this.$store.app.requestDeleteInvoice(invoice.id); },
         removePayment: function (payment) { this.$store.app.requestDeletePayment(payment.id); },
+        statusClass: function (status) {
+          if (status === 'lunas') return 'badge-success';
+          if (status === 'sebagian') return 'badge-info';
+          return 'badge-warning';
+        },
         statusLabel: function (status) {
           if (status === 'lunas') return 'Lunas';
           if (status === 'sebagian') return 'Sebagian';

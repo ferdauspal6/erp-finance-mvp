@@ -43,9 +43,18 @@
   }
 
   function statusClass(status) {
-    if (status === 'ditolak' || status === 'dibatalkan') return 'badge-outline';
-    if (status === 'selesai' || status === 'diterima_penuh' || status === 'disetujui' || status === 'posted') return 'badge-solid';
-    return 'badge-outline';
+    if (status === 'ditolak' || status === 'dibatalkan') return 'badge-danger';
+    if (status === 'selesai' || status === 'diterima_penuh' || status === 'disetujui' || status === 'posted' || status === 'confirmed') return 'badge-success';
+    if (status === 'diajukan' || status === 'menunggu_persetujuan') return 'badge-warning';
+    if (status === 'diproses' || status === 'dikirim' || status === 'diterima_sebagian') return 'badge-info';
+    return 'badge-neutral';
+  }
+
+  function replacementStatusClass(status) {
+    if (status === 'menunggu') return 'badge-warning';
+    if (status === 'sebagian') return 'badge-info';
+    if (status === 'selesai') return 'badge-success';
+    return 'badge-neutral';
   }
 
   function register(Alpine) {
@@ -999,6 +1008,7 @@
         statusLabel: function (status) { return Returns.returnStatusLabel(status); },
         jenisLabel: function (jenis) { return Returns.jenisLabel(jenis); },
         replacementStatusLabel: function (status) { return Returns.replacementStatusLabel(status); },
+        replacementStatusClass: replacementStatusClass,
         statusClass: statusClass,
         accName: function (id) { return this.$store.app.accName(id); }
       };
@@ -1020,5 +1030,5 @@
     });
   }
 
-  global.PurchasingPages = { register: register };
+  global.PurchasingPages = { register: register, statusClass: statusClass, replacementStatusClass: replacementStatusClass };
 })(typeof window !== 'undefined' ? window : globalThis);

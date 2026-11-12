@@ -297,6 +297,91 @@
     return dates.length ? dates[dates.length - 1] : Format.todayISO();
   }
 
+  function timeSeries(state, requestedMode) {
+    var dates = state.journals.map(function (journal) { return journal.tanggal; })
+      .filter(function (tanggal) { return Format.isValidDateISO(tanggal); })
+      .sort();
+    if (!dates.length) {
+      return { mode: 'bulanan', points: [], totalPendapatan: 0, totalBeban: 0 };
+    }
+    var first = dates[0];
+    var last = dates[dates.length - 1];
+    var autoMode = first.slice(0, 7) === last.slice(0, 7) ? 'harian' : 'bulanan';
+    var mode = requestedMode === 'harian' || requestedMode === 'bulanan' ? requestedMode : autoMode;
+    var points = [];
+
+    if (mode === 'harian') {
+      var start = first;
+      if (Format.daysBetween(first, last) > 366) start = Format.addDays(last, -365);
+      var cursor = start;
+      var guard = 0;
+      while (cursor <= last && guard < 366) {
+        var day = Format.parseISO(cursor);
+        points.push({
+          key: cursor,
+          x: day.getTime(),
+          label: day.getDate() + ' ' + Format.BULAN[day.getMonth()],
+          pendapatan: 0,
+          beban: 0
+        });
+        cursor = Format.addDays(cursor, 1);
+        guard++;
+      }
+    } else {
+      var startYear = Number(first.slice(0, 4));
+      var startMonth = Number(first.slice(5, 7));
+      var endYear = Number(last.slice(0, 4));
+      var endMonth = Number(last.slice(5, 7));
+      var month = startMonth;
+      var year = startYear;
+      while (year < endYear || (year === endYear && month <= endMonth)) {
+        var monthText = (month < 10 ? '0' : '') + month;
+        var monthKey = year + '-' + monthText;
+        points.push({
+          key: monthKey,
+          x: Format.parseISO(monthKey + '-01').getTime(),
+          label: Format.BULAN[month - 1] + ' ' + year,
+          pendapatan: 0,
+          beban: 0
+        });
+        month++;
+        if (month > 12) {
+          month = 1;
+          year++;
+        }
+      }
+      if (points.length > 12) points = points.slice(-12);
+    }
+
+    var index = {};
+    points.forEach(function (point) { index[point.key] = point; });
+    var accounts = {};
+    state.accounts.forEach(function (account) { accounts[account.id] = account; });
+
+    state.journals.forEach(function (journal) {
+      var key = mode === 'harian' ? journal.tanggal : journal.tanggal.slice(0, 7);
+      var point = index[key];
+      if (!point) return;
+      state.journalLines.forEach(function (line) {
+        if (line.journalId !== journal.id) return;
+        var account = accounts[line.accountId];
+        if (!account) return;
+        if (account.tipe === 'Pendapatan') {
+          point.pendapatan += (Number(line.kredit) || 0) - (Number(line.debit) || 0);
+        } else if (account.tipe === 'Beban') {
+          point.beban += (Number(line.debit) || 0) - (Number(line.kredit) || 0);
+        }
+      });
+    });
+
+    return {
+      mode: mode,
+      points: points,
+      totalPendapatan: points.reduce(function (sum, point) { return sum + point.pendapatan; }, 0),
+      totalBeban: points.reduce(function (sum, point) { return sum + point.beban; }, 0)
+    };
+  }
+
   function tooltipSisaPiutang(invoice, dibayar, sisa, retur) {
     var text = 'Tagihan ' + Format.num(invoice.total);
     if (Number(retur) > 0) text += ' dikurangi retur ' + Format.num(retur);
@@ -315,6 +400,7 @@
     neraca: neraca,
     dibayarTagihan: dibayarTagihan,
     totalReturPotong: totalReturPotong,
+    timeSeries: timeSeries,
     sisaTagihan: sisaTagihan,
     statusTagihan: statusTagihan,
     umurPiutang: umurPiutang,

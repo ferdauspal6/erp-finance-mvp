@@ -33,6 +33,15 @@
     assert('Total beban operasional', lr.totalBeban, 3800000);
     assert('Laba kotor', lr.labaKotor, 5600000);
 
+    var series = Report.timeSeries(state);
+    assert('Mode grafik harian', series.mode, 'harian');
+    assert('Total pendapatan grafik', series.totalPendapatan, 14000000);
+    assert('Total beban grafik', series.totalBeban, 12200000);
+    var monthlySeries = Report.timeSeries(state, 'bulanan');
+    assert('Mode grafik bulanan', monthlySeries.mode, 'bulanan');
+    assert('Total pendapatan grafik bulanan', monthlySeries.totalPendapatan, 14000000);
+    assert('Timestamp grafik tersedia', typeof monthlySeries.points[0].x, 'number');
+
     var nc = Report.neraca(state, sampai);
     assert('Total aset', nc.totalAset, 57800000);
     assert('Kas', Report.saldoAkun(state, 'acc_11100', null, sampai), 45200000);

@@ -20,7 +20,7 @@ Pilihan role disimpan di localStorage. Pemisahan menu bersifat ketat: Finance ti
 - **Transaksi Cepat** — setor modal, jual tunai, bayar beban, prive, dan transfer. HPP penjualan ditunda ke fase Pengeluaran Barang.
 - **Piutang** — tagihan per pelanggan, pembayaran sebagian, status otomatis, dan aging.
 - **Utang** — tagihan otomatis dari Penerimaan Barang, pembayaran, retur, dan Piutang Supplier.
-- **Buku Besar, Laporan, Rekening, Dashboard, Informasi** — sama seperti sebelumnya.
+- **Buku Besar, Laporan, Rekening, Dashboard, Informasi** — Dashboard Finance menampilkan line chart pendapatan (hijau) vs pengeluaran (merah) dengan toggle harian/bulanan, tooltip, dan zoom.
 - **Persetujuan** — menyetujui atau menolak PR/PO, termasuk ambang persetujuan PO.
 
 ### Logistik
@@ -68,6 +68,7 @@ PO tidak membuat jurnal atau utang karena masih berupa komitmen. Utang baru diak
 - [Tailwind CSS Play CDN](https://tailwindcss.com/) untuk styling.
 - [Alpine.js CDN](https://alpinejs.dev/) untuk interaktivitas dan state global.
 - `localStorage` sebagai penyimpanan, diakses lewat `js/store.js`.
+- [ApexCharts](https://apexcharts.com/) via CDN untuk line chart Dashboard Finance.
 - Font Inter via Google Fonts.
 
 Tailwind, Alpine, dan font dimuat dari CDN sehingga **butuh koneksi internet** saat aplikasi dibuka.
@@ -151,6 +152,7 @@ node tests/actions.js
 └── js/
     ├── app.js               # state Alpine, routing, role guard, aksi akuntansi
     ├── auth.js              # Alpine.store('auth'), role aktif
+    ├── chart.js             # opsi ApexCharts, format uang, tooltip
     ├── format.js            # format rupiah dan tanggal
     ├── glosarium.js         # kamus tooltip
     ├── inventory.js         # stock movements, posisi stok, nilai persediaan
@@ -174,4 +176,4 @@ node tests/actions.js
 
 ## Batasan MVP
 
-Sengaja belum memuat login sungguhan, Super Admin/override, refund supplier otomatis, kartu stok, opname, pengeluaran barang dan HPP dari stok, transfer antar gudang, RFQ, PPN, faktur supplier, penyusutan, multi-mata uang, rekonsiliasi bank, penutupan periode, dan audit trail penuh. Role switch hanya pembatas UI di sisi browser.
+Sengaja belum memuat login sungguhan, Super Admin/override, refund supplier otomatis, kartu stok, opname, pengeluaran barang dan HPP dari stok, transfer antar gudang, RFQ, PPN, faktur supplier, penyusutan, multi-mata uang, rekonsiliasi bank, penutupan periode, dan audit trail penuh. Role switch hanya pembatas UI di sisi browser. Status badge memakai warna semantik: hijau untuk sukses, kuning untuk menunggu, merah untuk bahaya, biru untuk proses.

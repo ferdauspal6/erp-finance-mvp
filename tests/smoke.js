@@ -22,6 +22,7 @@ const files = [
   'js/reconcile.js',
   'js/seed.js',
   'js/seed-purchasing.js',
+  'js/chart.js',
   'js/overlays.js',
   'js/pages-purchasing.js',
   'js/app.js',
@@ -179,6 +180,17 @@ check('Stock page', () => {
   auth.setRole('logistik');
   const page = instantiate('stockPage');
   return [page.rows.length, page.totalNilai, page.reconcile.ok];
+});
+check('Status badge semantic', () => {
+  const statusClass = context.PurchasingPages.statusClass;
+  return [statusClass('disetujui'), statusClass('menunggu_persetujuan'), statusClass('ditolak'), statusClass('dikirim'), statusClass('draft')];
+});
+check('Dashboard chart', () => {
+  app.replaceData(context.Seed.scenario());
+  auth.setRole('finance');
+  const page = instantiate('dashboardPage');
+  const options = context.Chart.options(page.series, page.chartMode);
+  return [page.series.mode, page.series.totalPendapatan, page.series.totalBeban, page.chartEmpty, options.colors.join(',')];
 });
 
 console.log(`\nRoles: ${auth.roles.map((role) => role.id).join(', ')}`);
